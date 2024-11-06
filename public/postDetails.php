@@ -125,7 +125,7 @@ $conn->close();
 
     <!-- Main Container -->
     <div id="main-content" class="content pt-8 flex justify-center">
-        <div class="flex justify-center w-full max-w-6xl">
+        <div class="flex justify-center mr-80 mt-4">
             <div class="p-4 mx-auto w-full max-w-4xl">
                 <div class="space-y-4">
                     <div class="bg-white p-4 shadow rounded mb-4">
