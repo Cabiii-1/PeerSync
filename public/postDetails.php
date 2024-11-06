@@ -78,6 +78,7 @@ $conn->close();
     <title>Bubble Posts</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .dropdown:hover .dropdown-menu { display: block; }
         .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.4); }
@@ -134,7 +135,7 @@ $conn->close();
                                 <div class="text-gray-700 font-bold"><?= htmlspecialchars($post['username']) ?></div>
                                 <div class="text-gray-500 text-sm"><?= htmlspecialchars($post['bubble_name']) ?> • <?= date('F j, Y, g:i a', strtotime($post['created_at'])) ?></div>
                             </div>
-                            <button type="button" class="ml-auto inline-flex justify-center w-10 h-10 rounded-full border border-gray-300 shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none" id="menu-button" aria-expanded="true" aria-haspopup="true">
+                            <button type="button" class="ml-auto inline-flex justify-center w-10 h-10 rounded-full border border-gray-300 shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none absolute right-0 top-0 mt-2 mr-2" id="menu-button" aria-expanded="true" aria-haspopup="true">
                                 <i class="fas fa-ellipsis-h"></i>
                             </button>
                             <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1">
@@ -194,27 +195,27 @@ $conn->close();
                         <?php endforeach; ?>
                     </div>
                 </div>
+            </div>
 
-                <!-- About Bubble Section -->
-                <div class="w-1/5 p-4 space-y-4">
-                    <div class="bg-white rounded-lg shadow-md">
-                        <div class="p-4">
-                            <h3 class="font-bold mb-4">About Bubble</h3>
-                            <div class="flex items-center mb-4">
-                                <?php if (!empty($profile_image_base64)): ?>
-                                    <img src="<?= $profile_image_base64 ?>" alt="<?= htmlspecialchars($post['bubble_name']) ?>" class="w-10 h-10 rounded-full mr-2">
-                                <?php else: ?>
-                                    <img src="default-profile.png" alt="Default Profile Image" class="w-10 h-10 rounded-full mr-2">
-                                <?php endif; ?>
-                                <span class="font-bold"><?= htmlspecialchars($post['bubble_name']) ?></span>
-                            </div>
-                            <p class="text-sm mb-4"><?= htmlspecialchars($post['bubble_description']) ?></p>
-                            <p class="text-xs text-gray-500">Created: <?= htmlspecialchars($post['bubble_created_at']) ?></p>
-                            <button class="mt-4 w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Create Post</button>
+            <!-- About Bubble Section -->
+            <aside class="w-64 bg-white p-4 overflow-auto fixed right-0 top-16 h-full shadow-lg">
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-2">About Bubble</h2>
+                        <div class="flex items-center mb-4">
+                            <?php if (!empty($profile_image_base64)): ?>
+                                <img src="<?= $profile_image_base64 ?>" alt="<?= htmlspecialchars($post['bubble_name']) ?>" class="w-10 h-10 rounded-full mr-2">
+                            <?php else: ?>
+                                <img src="default-profile.png" alt="Default Profile Image" class="w-10 h-10 rounded-full mr-2">
+                            <?php endif; ?>
+                            <span class="font-bold"><?= htmlspecialchars($post['bubble_name']) ?></span>
                         </div>
+                        <p class="text-sm mb-4"><?= htmlspecialchars($post['bubble_description']) ?></p>
+                        <p class="text-xs text-gray-500">Created: <?= htmlspecialchars($post['bubble_created_at']) ?></p>
+                        <button class="mt-4 w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Create Post</button>
                     </div>
                 </div>
-            </div>
+            </aside>
         </div>
     </div>
 
