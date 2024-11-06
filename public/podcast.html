@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Podcastfy</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Podcastfy</h1>
+    </header>
+    <main>
+      <section id="podcast-list">
+        <h2>Available Podcasts</h2>
+        <ul>
+          <li>Podcast 1</li>
+          <li>Podcast 2</li>
+          <li>Podcast 3</li>
+        </ul>
+      </section>
+      <section id="player">
+        <h2>Now Playing</h2>
+        <div id="current-podcast">
+          <p>Select a podcast to play</p>
+        </div>
+        <audio controls>
+          <source id="audio-source" src="" type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
+      </section>
+    </main>
+    <footer>
+      <p>&copy; 2023 Podcastfy</p>
+    </footer>
+    <script src="scripts.js"></script>
+  </body>
+</html>
