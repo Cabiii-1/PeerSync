@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'config.php'; // Ensure this file correctly sets up the $conn variable
+include 'config.php'; // Ensure this file correctly sets up the $conn variable
 
 // Check if the post_id is provided
 if (!isset($_GET['post_id'])) {
@@ -9,6 +9,16 @@ if (!isset($_GET['post_id'])) {
 }
 
 $post_id = $_GET['post_id'];
+$user_id = $_SESSION['user_id'];
+
+// Fetch user data from the database
+$query = "SELECT * FROM users WHERE id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$stmt->close();
 
 // Fetch the post details
 $query = "
@@ -91,7 +101,7 @@ $conn->close();
 </head>
 <body class="bg-blue-50">
     <!-- Navbar -->
-    <nav class="navbar bg-secondary-100 text-white flex justify-between items-center" style="background-color: rgb(43 84 126 / var(--tw-bg-opacity));">
+    <nav class="navbar bg-secondary-100 text-white  flex justify-between items-center" style="background-color: rgb(43 84 126 / var(--tw-bg-opacity)) /* #2b547e */;}">
         <div class="flex items-center">
             <a href="indexTimeline.php"><img src="../public/ps.png" alt="Peerync Logo" class="h-16 w-16"></a>
             <span class="text-2xl font-bold">PeerSync</span>
@@ -135,16 +145,17 @@ $conn->close();
                                 <div class="text-gray-700 font-bold"><?= htmlspecialchars($post['username']) ?></div>
                                 <div class="text-gray-500 text-sm"><?= htmlspecialchars($post['bubble_name']) ?> • <?= date('F j, Y, g:i a', strtotime($post['created_at'])) ?></div>
                             </div>
-                            <button type="button" class="ml-auto inline-flex justify-center w-10 h-10 rounded-full border border-gray-300 shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none absolute right-0 top-0 mt-2 mr-2" id="menu-button" aria-expanded="true" aria-haspopup="true">
-                                <i class="fas fa-ellipsis-h"></i>
-                            </button>
-                            <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1">
-                                <div class="py-1" role="none">
-                                    <a href="#" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-0">Report</a>
-                                    <a href="editPost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-1">Edit</a>
-                                    <a href="deletePost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-2">Delete</a>
-                                </div>
-                            </div>
+                            <div class="relative ml-auto">
+    <button type="button" class="inline-flex justify-center shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none" id="menu-button-<?= $post['id'] ?>" aria-expanded="false" aria-haspopup="menu">
+        <i class="fas fa-ellipsis-h"></i>
+    </button>
+    <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button-<?= $post['id'] ?>" tabindex="-1" id="menu-<?= $post['id'] ?>">
+        <div class="py-1" role="none">
+            <a href="editPost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-1">Edit</a>
+            <a href="deletePost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-2">Delete</a>
+        </div>
+    </div>
+</div>
                         </div>
                         <a href="postDetails.php?post_id=<?= $post['id'] ?>" class="block">
                             <h3 class="text-xl font-bold mb-2"><?= htmlspecialchars($post['title']) ?></h3>
@@ -251,10 +262,12 @@ $conn->close();
 
         document.addEventListener("DOMContentLoaded", fetchJoinedBubbles);
 
-        document.getElementById('menu-button').addEventListener('click', function() {
-            const dropdownMenu = this.nextElementSibling;
-            dropdownMenu.classList.toggle('hidden');
-        });
+        document.querySelectorAll('[id^="menu-button-"]').forEach(button => {
+    button.addEventListener('click', function() {
+        const dropdownMenu = document.getElementById(`menu-${this.id.split('-')[2]}`);
+        dropdownMenu.classList.toggle('hidden');
+    });
+});
     </script>
 </body>
 </html>
