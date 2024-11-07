@@ -149,12 +149,14 @@ $conn->close();
     <button type="button" class="inline-flex justify-center shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none" id="menu-button-<?= $post['id'] ?>" aria-expanded="false" aria-haspopup="menu">
         <i class="fas fa-ellipsis-h"></i>
     </button>
-    <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button-<?= $post['id'] ?>" tabindex="-1" id="menu-<?= $post['id'] ?>">
-        <div class="py-1" role="none">
-            <a href="editPost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-1">Edit</a>
-            <a href="deletePost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-2">Delete</a>
+    <?php if ($post['user_id'] == $user_id): ?>
+        <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button-<?= $post['id'] ?>" tabindex="-1" id="menu-<?= $post['id'] ?>">
+            <div class="py-1" role="none">
+                <a href="editPost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-1">Edit</a>
+                <a href="deletePost.php?post_id=<?= htmlspecialchars($post_id) ?>" class="text-gray-700 block px-4 py-2 text-sm" role="menuitem" tabindex="-1" id="menu-item-2">Delete</a>
+            </div>
         </div>
-    </div>
+    <?php endif; ?>
 </div>
                         </div>
                         <a href="postDetails.php?post_id=<?= $post['id'] ?>" class="block">
