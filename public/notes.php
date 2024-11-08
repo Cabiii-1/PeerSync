@@ -104,7 +104,23 @@ if ($notebook_id) {
     $notes_stmt->close();
 } else {
     $notes = [];
-}?>
+}
+
+// Handle search for a specific note
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search_term'])) {
+    $search_term = '%' . $_GET['search_term'] . '%';
+    $search_query = "SELECT * FROM notes WHERE NotebookID = ? AND Title LIKE ?";
+    $search_stmt = $conn->prepare($search_query);
+    $search_stmt->bind_param("is", $notebook_id, $search_term);
+    $search_stmt->execute();
+    $search_result = $search_stmt->get_result();
+    $notes = [];
+    while ($row = $search_result->fetch_assoc()) {
+        $notes[] = $row;
+    }
+    $search_stmt->close();
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -168,7 +184,7 @@ if ($notebook_id) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
                     </button>
-                    <h1 class="text-xl font-semibold">Notebook:</h1>
+                    <h1 class="text-xl font-semibold"></h1>
                     <?php
                     $notebook_id = $_GET['notebook_id'] ?? null;
                     $notebook_title = "Notebook Title";
@@ -183,6 +199,15 @@ if ($notebook_id) {
                     }
                     ?>
                     <h1 class="text-xl font-semibold"><?php echo $notebook_title; ?></h1>
+                    <div class="relative ml-4">
+                        <form method="GET" action="notes.php">
+                            <input type="hidden" name="notebook_id" value="<?php echo htmlspecialchars($notebook_id); ?>">
+                            <input type="text" name="search_term" id="searchNotes" placeholder="Search notes..." class="border-2 h-10 w-full p-2 rounded">
+                            <button type="submit" class="absolute right-0 top-0 mt-2 mr-2">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
                     <div class="ml-auto">
                         <button class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow flex items-center" onclick="showNoteModal()">
                             <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -191,7 +216,7 @@ if ($notebook_id) {
                             <span>Add Note</span>
                         </button>
                     </div>
-                </div>
+                </div>           
             </div>
         </div>
     </div>
@@ -201,7 +226,7 @@ if ($notebook_id) {
         <?php if (empty($notes)): ?>
     <p class="text-gray-600">No notes available.</p>
 <?php else: ?>
-    <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <ul id="notesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <?php foreach ($notes as $note): ?>
             <li class="bg-yellow-200 p-6 rounded-lg shadow-lg transform transition duration-500 hover:scale-105 cursor-pointer overflow-hidden" style="height: 250px;" onclick="showNoteDetails(<?php echo htmlspecialchars(json_encode($note)); ?>)">
                 <h3 class="text-lg font-semibold"><?php echo htmlspecialchars($note['Title']); ?></h3>
@@ -250,7 +275,7 @@ if ($notebook_id) {
   
 
     <!-- Modal Backdrop -->
-    <div id="modalBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
+    <div id="modalBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;">
         <!-- Modal Form for Add Note -->
         <form id="noteForm" action="notes.php" method="POST" enctype="multipart/form-data" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 10px; border: 2px solid #49759E; width: 80%;">
     <input type="hidden" name="notebook_id" value="<?php echo htmlspecialchars($notebook_id); ?>">
