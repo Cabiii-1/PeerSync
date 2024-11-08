@@ -24,24 +24,46 @@ while ($row = $notebooks_result->fetch_assoc()) {
 }
 
 // Handle form submission for adding a new note
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title']) && isset($_POST['content'])) {
-    $note_title = $_POST['title'];
-    $note_content = $_POST['content'];
-    $notebook_id = $_POST['notebook_id'] ?? null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title']) && isset($_POST['content']) && !isset($_POST['update_note_id'])) {
+    $new_note_title = $_POST['title'];
+    $new_note_content = $_POST['content'];
+    $new_notebook_id = $_POST['notebook_id'] ?? null;
 
     // Insert the new note into the database
     $insert_note_query = "INSERT INTO notes (Title, ContentType, Content, NotebookID, CreatedAt) VALUES (?, 'text', ?, ?, NOW())";
     $insert_note_stmt = $conn->prepare($insert_note_query);
-    $insert_note_stmt->bind_param("ssi", $note_title, $note_content, $notebook_id);
+    $insert_note_stmt->bind_param("ssi", $new_note_title, $new_note_content, $new_notebook_id);
 
     if ($insert_note_stmt->execute()) {
         // Redirect to the same page to show the new note
-        header("Location: notes.php?notebook_id=" . $notebook_id);
+        header("Location: notes.php?notebook_id=" . $new_notebook_id);
         exit();
     } else {
         echo "Error: " . $insert_note_stmt->error;
     }
     $insert_note_stmt->close();
+}
+
+// Handle note update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_note_id'])) {
+    $edit_note_id = $_POST['update_note_id'];
+    $edit_note_title = $_POST['title'];
+    $edit_note_content = $_POST['content'];
+    $edit_notebook_id = $_POST['notebook_id'] ?? null;
+
+    // Update the note in the database
+    $update_note_query = "UPDATE notes SET Title = ?, Content = ? WHERE NoteID = ?";
+    $update_note_stmt = $conn->prepare($update_note_query);
+    $update_note_stmt->bind_param("ssi", $edit_note_title, $edit_note_content, $edit_note_id);
+
+    if ($update_note_stmt->execute()) {
+        // Redirect to the same page to show the updated note
+        header("Location: notes.php?notebook_id=" . $edit_notebook_id);
+        exit();
+    } else {
+        echo "Error: " . $update_note_stmt->error;
+    }
+    $update_note_stmt->close();
 }
 
 // Handle note deletion
@@ -64,6 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_note_id'])) {
 
     $delete_note_stmt->close();
 }
+
+
 
 // Fetch notes data from the database
 $notebook_id = $_GET['notebook_id'] ?? null;
@@ -96,14 +120,13 @@ if ($notebook_id) {
 <style>
     .dropdown:hover .dropdown-menu { display: block; }
     .sidebar { width: 80px; transition: width 0.3s; position: fixed; top: 0; left: 0; height: 100%; overflow: hidden; }
-    .navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; }
+    .navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 999; }
     .content { margin-top: 64px; margin-left: 80px; transition: margin-left 0.3s; }
 </style>
 <body class="bg-gray-100 p-6">
 
     <!-- Navbar -->
-    <nav class="navbar bg-secondary-100 text-white flex justify-between items-center" style="background-color: rgb(43 84 126 / var(--tw-bg-opacity)) /* #2b547e */;
-}">
+    <nav class="navbar bg-secondary-100 text-white flex justify-between items-center" style="background-color: rgb(43 84 126 / var(--tw-bg-opacity)) /* #2b547e */;}">
         <div class="flex items-center">
             <a href="indexTimeline.php"><img src="../public/ps.png" alt="Peerync Logo" class="h-16 w-16"></a>
             <span class="text-2xl font-bold">PeerSync</span>
@@ -210,19 +233,24 @@ if ($notebook_id) {
     }
 </script>
 
-<!-- Note Details Modal -->
-<div id="noteDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;">
-    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 10px; border: 2px solid #49759E; width: 80%; height: 80%; overflow-y: auto;">
-        <h2 id="noteDetailsTitle" class="text-xl font-semibold mb-4"></h2>
-        <div id="noteDetailsContent" class="text-gray-700 mb-4"></div>
-        <button class="mt-3 p-2 bg-red-500 text-white rounded" onclick="hideNoteDetails()">Close</button>
+    <!-- Note Details Modal -->
+    <div id="noteDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;">
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 40px; border-radius: 10px; border: 2px solid #49759E; width: 60%; height: 90%; overflow-y: auto;">
+            <form method="POST" action="notes.php">
+                <input type="hidden" name="update_note_id" id="update_note_id">
+                <input type="hidden" name="notebook_id" value="<?php echo htmlspecialchars($notebook_id); ?>">
+                <input type="text" name="title" id="noteDetailsTitle" class="border-2 h-10 w-full p-2 mt-2" required>
+                <textarea id="noteDetailsContent" name="content" class="border-2 h-40 w-full p-2 mt-2" required></textarea>
+                <button type="submit" class="mt-3 p-2 bg-blue-500 text-white rounded" onclick="saveNotes()">Save Changes</button>
+                <button type="button" class="mt-3 p-2 bg-red-500 text-white rounded" onclick="hideNoteDetails()">Cancel</button>
+            </form>
+        </div>
     </div>
-</div>
 
   
 
     <!-- Modal Backdrop -->
-    <div id="modalBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;">
+    <div id="modalBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
         <!-- Modal Form for Add Note -->
         <form id="noteForm" action="notes.php" method="POST" enctype="multipart/form-data" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 20px; border-radius: 10px; border: 2px solid #49759E; width: 80%;">
     <input type="hidden" name="notebook_id" value="<?php echo htmlspecialchars($notebook_id); ?>">
@@ -234,46 +262,57 @@ if ($notebook_id) {
     </div>
 
     <script>
-        // Initialize TinyMCE
-        tinymce.init({
-            selector: '#noteContent',
-            plugins: [
-                'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-                'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'editimage', 'advtemplate', 'ai', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown',
-                'importword', 'exportword', 'exportpdf'
-            ],
-            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
-            tinycomments_mode: 'embedded',
-            tinycomments_author: 'Author name',
-            mergetags_list: [
-                { value: 'First.Name', title: 'First Name' },
-                { value: 'Email', title: 'Email' },
-            ],
-            ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
-            exportpdf_converter_options: { 'format': 'Letter', 'margin_top': '1in', 'margin_right': '1in', 'margin_bottom': '1in', 'margin_left': '1in' },
-            exportword_converter_options: { 'document': { 'size': 'Letter' } },
-            importword_converter_options: { 'formatting': { 'styles': 'inline', 'resets': 'inline', 'defaults': 'inline', } },
-        });
+    // Initialize TinyMCE
+    tinymce.init({
+        selector: '#noteContent, #noteDetailsContent',
+        plugins: [
+            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+            'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'editimage', 'advtemplate', 'ai', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown',
+            'importword', 'exportword', 'exportpdf'
+        ],
+        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+        tinycomments_mode: 'embedded',
+        tinycomments_author: 'Author name',
+        mergetags_list: [
+            { value: 'First.Name', title: 'First Name' },
+            { value: 'Email', title: 'Email' },
+        ],
+        ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
+        exportpdf_converter_options: { 'format': 'Letter', 'margin_top': '1in', 'margin_right': '1in', 'margin_bottom': '1in', 'margin_left': '1in' },
+        exportword_converter_options: { 'document': { 'size': 'Letter' } },
+        importword_converter_options: { 'formatting': { 'styles': 'inline', 'resets': 'inline', 'defaults': 'inline', } },
+    });
 
-        function showNoteModal() {
-            document.getElementById('modalBackdrop').style.display = 'block';
-            document.getElementById('noteForm').style.display = 'block';
-        }
+    function showNoteDetails(note) {
+        document.getElementById('update_note_id').value = note.NoteID;
+        document.getElementById('noteDetailsTitle').value = note.Title;
+        tinymce.get('noteDetailsContent').setContent(note.Content);
+        document.getElementById('noteDetailsModal').style.display = 'block';
+    }
 
-        function hideNoteModal() {
-            document.getElementById('modalBackdrop').style.display = 'none';
-            document.getElementById('noteForm').style.display = 'none';
-        }
+    function hideNoteDetails() {
+        document.getElementById('noteDetailsModal').style.display = 'none';
+    }
 
-        function saveNotes() {
-            tinymce.triggerSave();
-        }
+    function saveNotes() {
+        tinymce.triggerSave();
+    }
 
-        // Toggle dropdown menu
-        document.getElementById('profileImage').addEventListener('click', function() {
-            const dropdownMenu = this.nextElementSibling;
-            dropdownMenu.classList.toggle('hidden');
-        });
+    function showNoteModal() {
+        document.getElementById('modalBackdrop').style.display = 'block';
+        document.getElementById('noteForm').style.display = 'block';
+    }
+
+    function hideNoteModal() {
+        document.getElementById('modalBackdrop').style.display = 'none';
+        document.getElementById('noteForm').style.display = 'none';
+    }
+
+    // Toggle dropdown menu
+    document.getElementById('profileImage').addEventListener('click', function() {
+        const dropdownMenu = this.nextElementSibling;
+        dropdownMenu.classList.toggle('hidden');
+    });
 
         // Fetch the list of bubbles the user has joined
         function fetchJoinedBubbles() {
