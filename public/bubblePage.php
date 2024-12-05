@@ -39,7 +39,12 @@ $post_query = "SELECT bubble_posts.*, users.username, users.profile_image
 $post_stmt = $conn->prepare($post_query);
 $post_stmt->bind_param("i", $bubble_id);
 $post_stmt->execute();
-$posts = $post_stmt->get_result();
+$result = $post_stmt->get_result();
+$posts = [];
+while($row = $result->fetch_assoc()) {
+    $posts[] = $row;
+}
+$post_stmt->close();
 
 // Fetch bubble messages
 $message_query = "SELECT bubble_message.*, users.username, users.profile_image 
@@ -106,7 +111,46 @@ $notebook_stmt->close();
     .sidebar { width: 80px; transition: width 0.3s; position: fixed; top: 0; left: 0; height: 100%; overflow: visible; }
     .navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; }
     .dropdown-menu {z-index: 50; /* Ensure this value is higher than other elements */}
-    </style>
+
+    /* Notebook grid transitions */
+    #notebook-grid {
+        transition: opacity 0.3s ease-in-out;
+    }
+    #notebook-grid.fade-out {
+        opacity: 0;
+    }
+    #notebook-grid.fade-in {
+        opacity: 1;
+    }
+    .notebook {
+        transition: all 0.3s ease-in-out;
+        transform-origin: center;
+    }
+    .notebook.fade-out {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    .notebook.fade-in {
+        opacity: 1;
+        transform: scale(1);
+    }
+</style>
+    <script>
+        function toggleProfileDropdown(event) {
+            event.stopPropagation();
+            const dropdown = event.target.nextElementSibling;
+            dropdown.classList.toggle('hidden');
+
+            // Close dropdown when clicking outside
+            const closeDropdown = function(e) {
+                if (!dropdown.contains(e.target) && e.target.id !== 'profileImage') {
+                    dropdown.classList.add('hidden');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            document.addEventListener('click', closeDropdown);
+        }
+    </script>
 </head>
 <body class="bg-white h-screen flex flex-col">
     <!-- Navbar -->
@@ -125,8 +169,8 @@ $notebook_stmt->close();
             <a href="notebook.php" class="ml-4 hover:bg-blue-400 p-2 rounded">
                 <i class="fas fa-book fa-lg"></i>
             </a>
-            <div class="relative ml-4  p-4">
-                <img src="<?php echo htmlspecialchars($user['profile_image']); ?>" alt="Profile Image" class="w-10 h-10 rounded-full cursor-pointer" id="profileImage">
+            <div class="relative ml-4 p-4">
+            <img src="<?php echo htmlspecialchars($user['profile_image']); ?>" alt="Profile Image" class="w-10 h-10 rounded-full cursor-pointer" id="profileImage">
                 <div class="dropdown-menu absolute right-0 mt-1 w-48 bg-white border border-gray-300 rounded shadow-lg hidden">
                     <a href="profile.php" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Profile</a>
                     <a href="logout.php" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Logout</a>
@@ -166,13 +210,11 @@ $notebook_stmt->close();
                         <i class="fas fa-book mr-2"></i> Notebook
                     </a>
                 </li>
-                <?php if ($bubble['creator_id'] == $user_id): ?>
                     <li>
                         <a href="#" class="block p-2 rounded hover:bg-sky-200 transition duration-300" onclick="showContent('settings')">
                             <i class="fas fa-gear mr-2"></i> Settings
                         </a>
                     </li>
-                <?php endif; ?>
             </ul>
             <div class="flex items-center justify-between cursor-pointer mt-6" onclick="toggleMemberList()">
                 <h3 class="font-semibold">Bubble Members</h3>
@@ -191,7 +233,7 @@ $notebook_stmt->close();
 
         <div class="content-container flex-grow flex flex-col h-full p-5 overflow-y-auto bg-white">
 
-        <div id="chat" class="hidden flex flex-col h-full">
+         <div id="chat" class="hidden flex flex-col h-full">
                 <div class="bg-white border-b border-gray-200 p-4 flex items-center justify-between mb-2 shadow-md rounded-lg">
                     <div class="flex items-center space-x-4">
                         <div class="relative group">
@@ -218,10 +260,6 @@ $notebook_stmt->close();
                             <div id="options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                                 <div class="py-1">
                                     <a href="#" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                        <i class="fas fa-trash-alt mr-3"></i>
-                                        Delete Bubble
-                                    </a>
-                                    <a href="#" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                         <i class="fas fa-sign-out-alt mr-3"></i>
                                         Leave Bubble
                                     </a>
@@ -246,10 +284,10 @@ $notebook_stmt->close();
                                 </span>
                             </div>
                             <div class="relative">
-                                <button class="text-gray-500 hover:text-gray-700 focus:outline-none" onclick="toggleDropdown(this)">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <div class="dropdown-menu absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-2xl shadow-lg hidden">
+                            <button class="text-gray-500 hover:text-gray-700 focus:outline-none" onclick="toggleMessageDropdown(this)">
+    <i class="fas fa-ellipsis-v"></i>
+</button>
+<div class="dropdown-menu message-dropdown-menu absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-2xl shadow-lg hidden">
                                     <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 first:rounded-t-2xl">Report</a>
                                     <?php if ($message['user_id'] == $user_id): ?>
                                         <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100" onclick="showEditModal(<?php echo $message['id']; ?>, '<?php echo htmlspecialchars($message['message']); ?>')">Edit</a>
@@ -335,75 +373,112 @@ $notebook_stmt->close();
                 </form>
 
                 <div id="forum-posts" class="grid gap-6 grid-cols-1 lg:grid-cols-2 overflow-y-auto">
-                    <?php foreach ($posts as $post): ?>
-                        <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition duration-300 border border-gray-200 overflow-hidden">
-                            <a href="postDetails.php?post_id=<?= $post['id'] ?>" class="block">
-                                <?php if (!empty($post['image'])): ?>
-                                    <div class="w-full h-48 overflow-hidden">
-                                        <img src="data:image/jpeg;base64,<?= base64_encode($post['image']) ?>" 
-                                            alt="Post image" 
-                                            class="w-full h-full object-cover transform hover:scale-105 transition duration-500">
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <div class="p-6">
-                                    <div class="flex items-center space-x-3 mb-4">
-                                        <img src="<?= htmlspecialchars($post['profile_image']) ?>" 
-                                            alt="Profile" 
-                                            class="w-10 h-10 rounded-full border-2 border-gray-200">
-                                        <div>
-                                            <h3 class="font-semibold text-gray-800"><?= htmlspecialchars($post['username']) ?></h3>
-                                            <p class="text-sm text-gray-500"><?= date('M d, Y \a\t h:i A', strtotime($post['created_at'])) ?></p>
+                    <?php if (empty($posts)): ?>
+                        <div class="col-span-full flex flex-col items-center justify-center p-12 text-center">
+                            <div class="w-24 h-24 mb-6 text-gray-300">
+                                <i class="fas fa-comments text-6xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-700 mb-2">No discussions yet</h3>
+                            <p class="text-gray-500 mb-6">Be the first to start a discussion in this bubble!</p>
+                            <button id="start-discussion-btn" class="bg-sky-500 text-white px-6 py-3 rounded-lg hover:bg-sky-600 transition duration-300 flex items-center">
+                                <i class="fas fa-plus-circle mr-2"></i>Start a Discussion
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($posts as $post): ?>
+                            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition duration-300 border border-gray-200 overflow-hidden">
+                                <a href="postDetails.php?post_id=<?= $post['id'] ?>" class="block">
+                                    <?php if (!empty($post['image'])): ?>
+                                        <div class="w-full h-48 overflow-hidden">
+                                            <img src="data:image/jpeg;base64,<?= base64_encode($post['image']) ?>" 
+                                                alt="Post image" 
+                                                class="w-full h-full object-cover transform hover:scale-105 transition duration-500">
                                         </div>
-                                    </div>
-
-                                    <h3 class="text-xl font-bold text-gray-800 mb-2 line-clamp-2"><?= htmlspecialchars($post['title']) ?></h3>
-                                    <p class="text-gray-600 line-clamp-3 mb-4"><?= htmlspecialchars($post['message']) ?></p>
+                                    <?php endif; ?>
                                     
-                                    <div class="flex items-center justify-between text-sm text-gray-500">
-                                        <div class="flex items-center space-x-4">
-                                            <span class="flex items-center">
-                                                <i class="far fa-comment mr-1"></i>
-                                                <span>12 replies</span>
-                                            </span>
-                                            <span class="flex items-center">
-                                                <i class="far fa-eye mr-1"></i>
-                                                <span>48 views</span>
-                                            </span>
-                                        </div>
-                                        
-                                        <?php if ($post['user_id'] == $user_id): ?>
-                                            <div class="relative inline-block text-left">
-                                                <button class="p-2 hover:bg-gray-100 rounded-full transition-colors focus:outline-none" 
-                                                        onclick="event.preventDefault(); toggleDropdown(<?= $post['id'] ?>)">
-                                                    <i class="fas fa-ellipsis-h"></i>
-                                                </button>
-                                                <div id="dropdown-<?= $post['id'] ?>" 
-                                                    class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 z-10">
-                                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Edit post</a>
-                                                    <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete post</a>
+                                    <div class="p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <div class="flex items-center space-x-3">
+                                                <img src="<?= htmlspecialchars($post['profile_image']) ?>" 
+                                                    alt="Profile" 
+                                                    class="w-10 h-10 rounded-full border-2 border-gray-200">
+                                                <div>
+                                                    <h3 class="font-semibold text-gray-800"><?= htmlspecialchars($post['username']) ?></h3>
+                                                    <p class="text-sm text-gray-500"><?= date('M d, Y \a\t h:i A', strtotime($post['created_at'])) ?></p>
                                                 </div>
                                             </div>
-                                        <?php endif; ?>
+                                            <div class="relative inline-block text-left">
+                                                <?php if ($post['user_id'] == $user_id): ?>
+                                                    <button class="p-2 hover:bg-gray-100 rounded-full transition-colors focus:outline-none" 
+                                                            onclick="event.preventDefault(); toggleDropdown(<?= $post['id'] ?>)">
+                                                        <i class="fas fa-ellipsis-h"></i>
+                                                    </button>
+                                                    <div id="dropdown-<?= $post['id'] ?>" 
+                                                        class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 z-10">
+                                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Edit post</a>
+                                                        <a href="#" onclick="deletePost(event, <?= $post['id'] ?>)" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete post</a>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <h3 class="text-xl font-bold text-gray-800 mb-2 line-clamp-2"><?= htmlspecialchars($post['title']) ?></h3>
+                                        <p class="text-gray-600 line-clamp-3 mb-4"><?= htmlspecialchars($post['message']) ?></p>
                                     </div>
-                                </div>
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 
 
             <div id="notebook" class="hidden flex-grow flex flex-col">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-bold">Shared Notebooks</h1>
-                    <button onclick="openShareModal()" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300 flex items-center">
-                        <i class="fas fa-share-alt mr-2"></i>Share Your Notebook
-                    </button>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">Shared Notebooks</h1>
+                        <p class="text-gray-500 mt-1">Access and collaborate on shared notebooks</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <select id="notebook-sort" class="appearance-none bg-white border border-gray-300 rounded-lg py-2 px-4 pr-8 text-gray-700 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="name">Name A-Z</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <i class="fas fa-chevron-down text-sm"></i>
+                            </div>
+                        </div>
+                        <button onclick="openShareModal()" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300 flex items-center shadow-md">
+                            <i class="fas fa-share-alt mr-2"></i>Share Notebook
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="notebook-loading" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <?php for($i = 0; $i < 6; $i++): ?>
+                            <div class="animate-pulse bg-white rounded-lg p-4 shadow-md">
+                                <div class="flex items-center space-x-3 mb-4">
+                                    <div class="rounded-full bg-gray-200 h-10 w-10"></div>
+                                    <div class="flex-1">
+                                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                        <div class="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="h-4 bg-gray-200 rounded"></div>
+                                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                                </div>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
                 </div>
 
                 <!-- Notebook Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div id="notebook-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <?php
                     // Fetch shared notebooks for this bubble
                     $notebooks_query = "SELECT n.*, u.username, u.profile_image, np.permission_level 
@@ -417,63 +492,92 @@ $notebook_stmt->close();
                     $stmt->execute();
                     $shared_notebooks = $stmt->get_result();
                     
-                    while ($notebook = $shared_notebooks->fetch_assoc()): ?>
-                        <div id="notebook-<?php echo $notebook['id']; ?>" 
-                            class="notebook group relative bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-4">
-                            <div class="flex flex-col h-full">
-                                <div class="flex justify-between items-start mb-3">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="<?php echo htmlspecialchars($notebook['profile_image']); ?>" 
-                                            alt="Profile" 
-                                            class="w-8 h-8 rounded-full border-2 border-gray-200">
-                                        <div>
-                                            <h3 class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($notebook['name']); ?></h3>
-                                            <p class="text-xs text-gray-400">by <?php echo htmlspecialchars($notebook['username']); ?></p>
+                    if ($shared_notebooks->num_rows > 0):
+                        while ($notebook = $shared_notebooks->fetch_assoc()): ?>
+                            <div id="notebook-<?php echo $notebook['id']; ?>" 
+                                class="notebook group bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-6 border border-gray-100 hover:border-blue-100">
+                                <div class="flex flex-col h-full">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex items-center space-x-3">
+                                            <img src="<?php echo htmlspecialchars($notebook['profile_image']); ?>" 
+                                                alt="Profile" 
+                                                class="w-10 h-10 rounded-full border-2 border-gray-200 shadow-sm">
+                                            <div>
+                                                <h3 class="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors"><?php echo htmlspecialchars($notebook['name']); ?></h3>
+                                                <p class="text-sm text-gray-500">by <?php echo htmlspecialchars($notebook['username']); ?></p>
+                                            </div>
                                         </div>
+                                        <?php if ($notebook['user_id'] == $user_id): ?>
+                                            <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                <button class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
-                                </div>
 
-                                <div class="text-xs text-gray-400 mt-2">
-                                    Created: <?php echo date('M d, Y', strtotime($notebook['created_at'])); ?>
-                                </div>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-500 mb-4">
+                                        <span class="flex items-center" data-created="<?php echo $notebook['created_at']; ?>">
+                                            <i class="far fa-calendar-alt mr-1"></i>
+                                            <?php echo date('M d, Y', strtotime($notebook['created_at'])); ?>
+                                        </span>
+                                        <span class="flex items-center">
+                                            <i class="fas <?php echo $notebook['permission_level'] === 'edit' ? 'fa-edit text-blue-500' : 'fa-eye text-green-500'; ?> mr-1"></i>
+                                            <?php echo $notebook['permission_level'] === 'edit' ? 'Can Edit' : 'View Only'; ?>
+                                        </span>
+                                    </div>
 
-                                <div class="flex items-center mt-3 mb-4">
-                                    <span class="text-sm flex items-center text-gray-500">
-                                        <i class="fas <?php echo $notebook['permission_level'] === 'edit' ? 'fa-edit text-blue-500' : 'fa-eye text-green-500'; ?> mr-2"></i>
-                                        <?php echo $notebook['permission_level'] === 'edit' ? 'Can Edit' : 'View Only'; ?>
-                                    </span>
-                                </div>
+                                    <a href="notes.php?notebook_id=<?php echo $notebook['id']; ?>" 
+                                       class="mt-auto block p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors duration-200">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm font-medium text-gray-600 group-hover:text-blue-600">View Notes</span>
+                                            <i class="fas fa-chevron-right text-gray-400 group-hover:text-blue-500"></i>
+                                        </div>
+                                    </a>
 
-                                <a href="notes.php?notebook_id=<?php echo $notebook['id']; ?>" class="flex-grow">
-                                    <div class="text-sm text-gray-500">Click to view notes</div>
-                                </a>
-
-                                <?php if ($notebook['user_id'] == $user_id): ?>
-                                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        <button onclick="editPermissions(<?php echo $notebook['id']; ?>)" 
-                                                class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
-                                            <i class="fas fa-user-lock"></i>
-                                        </button>
-                                        
-                                        <form action="export_to_pdf.php" method="POST" class="inline-block" onclick="event.stopPropagation();">
-                                            <input type="hidden" name="notebook_id" value="<?php echo $notebook['id']; ?>">
-                                            <button type="submit" class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors">
-                                                <i class="fas fa-file-export"></i>
+                                    <?php if ($notebook['user_id'] == $user_id): ?>
+                                        <div class="flex justify-end gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                            <button onclick="editPermissions(<?php echo $notebook['id']; ?>)" 
+                                                    class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                                    title="Manage Permissions">
+                                                <i class="fas fa-user-lock"></i>
                                             </button>
-                                        </form>
+                                            
+                                            <form action="export_to_pdf.php" method="POST" class="inline-block" onclick="event.stopPropagation();">
+                                                <input type="hidden" name="notebook_id" value="<?php echo $notebook['id']; ?>">
+                                                <button type="submit" 
+                                                        class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                                                        title="Export to PDF">
+                                                    <i class="fas fa-file-export"></i>
+                                                </button>
+                                            </form>
 
-                                        <button onclick="removeShare(<?php echo $notebook['id']; ?>)"
-                                                class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </div>
-                                <?php endif; ?>
+                                            <button onclick="removeShare(<?php echo $notebook['id']; ?>)"
+                                                    class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                                    title="Remove Share">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
+                        <?php endwhile;
+                    else: ?>
+                        <div class="col-span-full flex flex-col items-center justify-center py-12 px-4 text-center">
+                            <div class="bg-gray-50 rounded-full p-6 mb-4">
+                                <i class="fas fa-book text-4xl text-gray-400"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">No Shared Notebooks Yet</h3>
+                            <p class="text-gray-500 mb-6 max-w-md">Share your notebooks with the bubble to start collaborating with other members.</p>
+                            <button onclick="openShareModal()" 
+                                    class="inline-flex items-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300 shadow-md">
+                                <i class="fas fa-share-alt mr-2"></i>
+                                Share Your First Notebook
+                            </button>
                         </div>
-                    <?php endwhile; ?>
+                    <?php endif; ?>
                 </div>
             </div>
-
 
             <div id="settings" class="hidden flex-grow flex flex-col">
     <!-- General Settings Tab -->
@@ -537,6 +641,20 @@ $notebook_stmt->close();
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Delete Bubble Section -->
+                        <div class="mt-12 pt-6 border-t border-gray-200">
+                            <div class="bg-red-50 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-red-600 mb-2">Delete Bubble</h3>
+                                <p class="text-gray-700 mb-4">
+                                    This action will permanently delete this bubble and all its contents. This cannot be undone.
+                                </p>
+                                <button onclick="showDeleteBubbleModal(event)" 
+                                        class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                                    Delete Bubble
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -560,7 +678,7 @@ $notebook_stmt->close();
                     bubbleItem.className = "bubble-container relative";
                     bubbleItem.innerHTML = `
                         <a href="bubblePage.php?bubble_id=${bubble.id}" class="block p-2 text-center transform hover:scale-105 transition-transform duration-200 relative">
-                            <img src="data:image/jpeg;base64,${bubble.profile_image}" alt="${bubble.bubble_name}" class="w-10 h-10 rounded-full mx-auto">
+                            <img src="data:image/jpeg;base64,${bubble.profile_image}" alt="${bubble.bubble_name}" class="w-10 h-10 rounded-full">
                             <div class="bubble-name-modal absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 transition-opacity duration-200">${bubble.bubble_name}</div>
                         </a>
                     `;
@@ -598,6 +716,12 @@ $notebook_stmt->close();
             document.getElementById(section).classList.remove('hidden');
 
             if (section === 'chat') fetchMessages();
+            else if (section === 'notebook') {
+                showNotebookLoading();
+                setTimeout(() => {
+                    hideNotebookLoading();
+                }, 500);
+            }
         }
 
         // Handle message form submission
@@ -990,8 +1114,220 @@ function toggleMemberList() {
             optionsMenu.classList.toggle('hidden');
         }
 
+// Function to toggle profile dropdown in navbar
+function toggleProfileDropdown(event) {
+    event.stopPropagation();
+    const profileDropdown = document.querySelector('#profileImage + .dropdown-menu');
+    
+    // Close all message dropdowns first
+    document.querySelectorAll('.message-dropdown-menu').forEach(menu => {
+        menu.classList.add('hidden');
+    });
+    
+    profileDropdown.classList.toggle('hidden');
+}
 
+// Function to toggle message dropdown menu
+function toggleMessageDropdown(button) {
+    event.stopPropagation();
+    
+    // Close profile dropdown
+    const profileDropdown = document.querySelector('#profileImage + .dropdown-menu');
+    profileDropdown.classList.add('hidden');
+    
+    // Close all other message dropdowns
+    const allMessageDropdowns = document.querySelectorAll('.message-dropdown-menu');
+    allMessageDropdowns.forEach(dropdown => {
+        if (dropdown !== button.nextElementSibling) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // Toggle the clicked dropdown
+    const dropdown = button.nextElementSibling;
+    dropdown.classList.toggle('hidden');
+}
+
+// Close all dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    // Close dropdowns if clicking outside of any dropdown or button
+    if (!event.target.closest('.dropdown-menu') && 
+        !event.target.closest('#profileImage') && 
+        !event.target.closest('button[onclick^="toggleMessageDropdown"]')) {
+        
+        // Close profile dropdown
+        const profileDropdown = document.querySelector('#profileImage + .dropdown-menu');
+        if (profileDropdown) {
+            profileDropdown.classList.add('hidden');
+        }
+        
+        // Close message dropdowns
+        document.querySelectorAll('.message-dropdown-menu').forEach(dropdown => {
+            dropdown.classList.add('hidden');
+        });
+    }
+});
+
+// Notebook loading states
+function showNotebookLoading() {
+    document.getElementById('notebook-loading').classList.remove('hidden');
+    document.getElementById('notebook-grid').classList.add('hidden');
+}
+
+function hideNotebookLoading() {
+    document.getElementById('notebook-loading').classList.add('hidden');
+    document.getElementById('notebook-grid').classList.remove('hidden');
+}
+
+// Sort notebooks
+document.getElementById('notebook-sort').addEventListener('change', function(e) {
+    const sortBy = e.target.value;
+    const notebookGrid = document.getElementById('notebook-grid');
+    const notebooks = Array.from(notebookGrid.getElementsByClassName('notebook'));
+    
+    // Add fade out effect
+    notebookGrid.classList.add('fade-out');
+    notebooks.forEach(notebook => notebook.classList.add('fade-out'));
+    
+    setTimeout(() => {
+        notebooks.sort((a, b) => {
+            if (sortBy === 'newest') {
+                const dateA = new Date(a.querySelector('[data-created]').dataset.created);
+                const dateB = new Date(b.querySelector('[data-created]').dataset.created);
+                return dateB - dateA;
+            } else if (sortBy === 'oldest') {
+                const dateA = new Date(a.querySelector('[data-created]').dataset.created);
+                const dateB = new Date(b.querySelector('[data-created]').dataset.created);
+                return dateA - dateB;
+            } else if (sortBy === 'name') {
+                const nameA = a.querySelector('h3').textContent.toLowerCase();
+                const nameB = b.querySelector('h3').textContent.toLowerCase();
+                return nameA.localeCompare(nameB);
+            }
+        });
+        
+        // Clear and re-append sorted notebooks
+        notebooks.forEach(notebook => {
+            notebookGrid.appendChild(notebook);
+        });
+        
+        // Add fade in effect
+        setTimeout(() => {
+            notebookGrid.classList.remove('fade-out');
+            notebookGrid.classList.add('fade-in');
+            notebooks.forEach(notebook => {
+                notebook.classList.remove('fade-out');
+                notebook.classList.add('fade-in');
+            });
+            
+            // Clean up classes after animation
+            setTimeout(() => {
+                notebookGrid.classList.remove('fade-in');
+                notebooks.forEach(notebook => notebook.classList.remove('fade-in'));
+            }, 300);
+        }, 50);
+    }, 300);
+});
+
+async function deleteBubble() {
+    try {
+        const response = await fetch('delete_bubble.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                bubble_id: <?php echo json_encode($bubble_id); ?>
+            })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('Bubble deleted successfully');
+            window.location.href = 'indexTimeline.php';
+        } else {
+            console.error('Failed to delete bubble:', data.error);
+            alert(data.error || 'Failed to delete bubble');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the bubble');
+    }
+}
+
+function showDeleteBubbleModal(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const modal = document.getElementById('deleteBubbleModal');
+    if (modal) {
+        modal.style.display = 'block';
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
+        console.log('Showing delete modal');
+    } else {
+        console.error('Delete modal not found');
+    }
+}
+
+function hideDeleteBubbleModal(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const modal = document.getElementById('deleteBubbleModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('deleteBubbleModal');
+    if (modal && !modal.classList.contains('hidden')) {
+        const modalContent = modal.querySelector('.bg-white');
+        if (modalContent && !modalContent.contains(event.target)) {
+            hideDeleteBubbleModal();
+        }
+    }
+});
+
+document.getElementById('start-discussion-btn')?.addEventListener('click', function() {
+        document.getElementById('new-post-btn').click();
+    });
 </script>
+
+<!-- Modals -->
+<!-- Delete Bubble Modal -->
+<div id="deleteBubbleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-red-600 mb-4">Delete Bubble</h3>
+            <p class="text-gray-600 mb-4">
+                Are you sure you want to delete this bubble? This action cannot be undone and will delete:
+            </p>
+            <ul class="list-disc list-inside mb-6 text-gray-600">
+                <li>All messages and chat history</li>
+                <li>All forum posts and comments</li>
+                <li>All member associations</li>
+            </ul>
+            <div class="flex justify-end space-x-3">
+                <button onclick="hideDeleteBubbleModal(event)" 
+                        class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button onclick="deleteBubble()" 
+                        class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                    Delete Bubble
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Share Modal -->
 <div id="shareModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">

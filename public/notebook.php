@@ -26,14 +26,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['notebook_name'])) {
 // Handle notebook deletion
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_notebook_id'])) {
     $notebook_id = intval($_POST['delete_notebook_id']);
-    $conn->query("DELETE FROM notebooks WHERE id = $notebook_id");
-    if ($conn->affected_rows > 0) {
+    
+    // First, delete all notes associated with this notebook
+    $delete_notes_sql = "DELETE FROM notes WHERE NotebookID = ?";
+    $stmt = $conn->prepare($delete_notes_sql);
+    $stmt->bind_param("i", $notebook_id);
+    $stmt->execute();
+    $stmt->close();
+    
+    // Then delete the notebook
+    $delete_notebook_sql = "DELETE FROM notebooks WHERE id = ? AND user_id = ?";
+    $stmt = $conn->prepare($delete_notebook_sql);
+    $stmt->bind_param("ii", $notebook_id, $_SESSION['user_id']);
+    $stmt->execute();
+    
+    if ($stmt->affected_rows > 0) {
         header("Location: notebook.php?message=Notebook deleted successfully");
         exit();
     } else {
-        header("Location: notebook.php?message=Error deleting notebook: " . urlencode($conn->error));
+        header("Location: notebook.php?message=Error deleting notebook");
         exit();
     }
+    $stmt->close();
 }
 
 $notebooks = [];
@@ -101,51 +115,100 @@ $stmt->close();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.tiny.cloud/1/9ai4ffzegkn572ycqvbetrnlp87ikc35prqpzfnpafymqzfe/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
     <style>
-        .sticky-note {
-            background-color: #ffeb3b;
-            padding: 20px;
-            margin: 10px;
-            width: 200px;
-            height: 200px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .sticky-note:hover {
-            transform: scale(1.05);
-        }
-        .dropdown:hover .dropdown-menu { display: block; }
-        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.4); }
-        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
-        .sidebar { width: 80px; transition: width 0.3s; position: fixed; top: 0; left: 0; height: 100%; overflow: visible; }
-        .navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; }
-        .content { margin-top: 64px; margin-left: 80px; transition: margin-left 0.3s; }
-        .right-sidebar { position: fixed; right: 0; height: calc(100% - 64px); overflow-y: auto; z-index: 100; margin-top: 80px; }
-        .notebook {
-            background-color: #fdfd96;
-            border: 2px solid #f4f4f4;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            width: 250px;
-            height: 300px;
-        }
-        .notebook:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
-        }
-        .notebook-header {
-            background-color: #ffeb3b;
-            border-bottom: 2px solid #f4f4f4;
-            padding: 15px;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-        }
-        .notebook-content {
-            padding: 15px;
-        }
-    </style> 
+    .notebook {
+    background-color: white !important;
+    padding: 1.5rem !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1) !important;
+    transition: all 0.3s ease !important;
+    height: 250px !important;
+    width: 350px !important;
+    position: relative !important;
+    border: 1px solid #e5e5e5 !important;
+    overflow: hidden !important;
+}
+
+.notebook::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 40px !important;
+    background: #3b82f6 !important;
+    border-radius: 12px 12px 0 0 !important;
+    transform: translateY(-90%) !important;
+    transition: transform 0.3s ease !important;
+}
+
+.notebook:hover::before {
+    transform: translateY(0) !important;
+}
+
+.notebook:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 8px 15px rgba(59, 130, 246, 0.2) !important;
+}
+
+.notebook-title {
+    color: #1e3a8a !important;
+    font-size: 1.25rem !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 0.5rem !important;
+    position: relative !important;
+}
+
+.notebook-title::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 50px !important;
+    height: 3px !important;
+    background: #3b82f6 !important;
+    border-radius: 3px !important;
+}
+.navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; }
+.sidebar { width: 80px; transition: width 0.3s; position: fixed; top: 0; left: 0; height: 100%; overflow: visible; }
+
+#main-content {
+    margin-left: 80px; /* Width of the sidebar */
+    margin-top: 80px; /* Increased margin-top to prevent navbar overlap */
+    padding: 20px;
+    min-height: calc(100vh - 80px);
+    width: calc(100% - 80px);
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+#notebooks-list {
+    margin-top: 1rem !important;
+    margin-left: 0 !important;
+}
+
+.notebook {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.notebook:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+</style>
 </head>
 <body class="bg-gray-100 h-screen">
     <!-- Navbar -->
@@ -187,15 +250,17 @@ $stmt->close();
             <div id="notebooks-container" class="mb-6">
                 <div class="">
                     <div class="container mx-auto px-4 py-4">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-2xl font-semibold">Your Notebooks</h2>
-                            <input type="text" id="searchBox" placeholder="Search notebooks..." class="border-2 border-solid p-2 rounded-md float-right mr-6 ml-6 mt-4" oninput="searchNotebooks()">
-                            <button class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow flex items-center" onclick="showAddNotebookModal()">
-                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                <span>Add Notebook</span>
-                            </button>
+                    <div class="flex items-center justify-between">
+                            <h2 class="text-3xl font-bold">Your Notebooks</h2>
+                            <div class="flex items-center gap-4">
+                                <input type="text" id="searchBox" placeholder="Search notebooks..." class="border-2 border-solid p-2 rounded-md w-64" oninput="searchNotebooks()">
+                                <button class="bg-black hover:bg-gray-900 text-white font-semibold py-2 px-4 rounded shadow flex items-center" onclick="showAddNotebookModal()">
+                                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    <span>Add Notebook</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -206,8 +271,8 @@ $stmt->close();
                         <h2 class="text-2xl font-semibold mb-4">Add Notebook</h2>
                         <form action="notebook.php" method="POST">
                             <input type="text" name="notebook_name" class="border p-2 w-full mb-4" placeholder="Notebook Name" required>
-                            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Add</button>
-                            <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" onclick="hideAddNotebookModal()">Cancel</button>
+                            <button type="submit" class="border border-transparent bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white px-4 py-2 rounded mr-2">Add</button>
+                            <button type="button" class="border border-gray-300 hover:bg-gray-50 text-sm font-medium text-gray-700 px-4 py-2 rounded" onclick="hideAddNotebookModal()">Cancel</button>
                         </form>
                     </div>
                 </div>
@@ -230,45 +295,47 @@ $stmt->close();
 
 
     <!--Notebook List-->
-    <div id="notebooks-list" class="flex flex-wrap mt-10">
-    <div class="grid grid-cols-3 gap-6">
+    <div id="notebooks-list" class="flex flex-wrap">
+    <div class="flex flex-row flex-wrap gap-6 w-full justify-start px-4">
         <?php if (!empty($notebooks)): ?>
             <?php foreach ($notebooks as $notebook): ?>
-                <div id="notebook-<?php echo $notebook['id']; ?>" class="notebook group relative bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-4">
+                <div id="notebook-<?php echo $notebook['id']; ?>" class="notebook group relative transition-all duration-300 p-4">
                     <div class="flex flex-col h-full">
                         <div class="flex justify-between items-center mb-3">
-                            <h3 id="title-<?php echo $notebook['id']; ?>" class="text-lg font-semibold notebook-title">
+                            <h3 id="title-<?php echo $notebook['id']; ?>" class="text-lg font-bold notebook-title">
                                 <?= htmlspecialchars(str_replace("\'", "'", $notebook['name'])) ?>
                             </h3>
                         </div>
 
-                        <div class="text-xs text-gray-400 mt-2">
+                        <div class="text-sm text-gray-500 mt-2">
                             Created: <?= date('M d, Y', strtotime($notebook['created_at'])) ?>
                         </div>
 
                         <a href="notes.php?notebook_id=<?php echo $notebook['id']; ?>" class="flex-grow">
-                            <div class="text-sm text-gray-500">Click to view notes</div>
+                            <!--div class="text-sm text-gray-500">Click to view notes</div-->
                         </a>
 
+                        <!--Icons here-->
                         <div class=" flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <button onclick="event.stopPropagation(); editNotebook(<?php echo $notebook['id']; ?>)" 
-                                    class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
+                                    class="p-2 text-black hover:text-gray-600">
                                 <i class="fas fa-edit"></i>
                             </button>
                             
                             <form action="export_to_pdf.php" method="POST" class="inline-block" onclick="event.stopPropagation();">
                                 <input type="hidden" name="notebook_id" value="<?php echo $notebook['id']; ?>">
-                                <button type="submit" class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors">
+                                <button type="submit" class="p-2 text-black hover:text-gray-600">
                                     <i class="fas fa-file-export"></i>
                                 </button>
                             </form>
 
                             <form action="notebook.php" method="POST" class="inline-block" onclick="event.stopPropagation();">
                                 <input type="hidden" name="delete_notebook_id" value="<?php echo $notebook['id']; ?>">
-                                <button type="submit" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors">
+                                <button type="submit" class="p-2 text-black hover:text-gray-600">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </form>
+                        <!--End of icons-->
                         </div>
                     </div>
                 </div>
@@ -278,6 +345,7 @@ $stmt->close();
         <?php endif; ?>
     </div>
 </div>
+
     <script>
         function showAddNotebookModal() {
             document.getElementById('add-notebook-modal').classList.remove('hidden');
@@ -385,8 +453,8 @@ document.getElementById('updateNotebookForm').addEventListener('submit', async f
 });
 
 
-        // Fetch the list of bubbles the user has joined
-        function fetchJoinedBubbles() {
+                // Fetch the list of bubbles the user has joined
+                function fetchJoinedBubbles() {
             fetch("joinedBubble.php")
             .then(response => response.json())
             .then(data => {
@@ -397,7 +465,7 @@ document.getElementById('updateNotebookForm').addEventListener('submit', async f
                     bubbleItem.className = "bubble-container relative";
                     bubbleItem.innerHTML = `
                         <a href="bubblePage.php?bubble_id=${bubble.id}" class="block p-2 text-center transform hover:scale-105 transition-transform duration-200 relative">
-                            <img src="data:image/jpeg;base64,${bubble.profile_image}" alt="${bubble.bubble_name}" class="w-10 h-10 rounded-full mx-auto">
+                            <img src="data:image/jpeg;base64,${bubble.profile_image}" alt="${bubble.bubble_name}" class="w-10 h-10 rounded-full">
                             <div class="bubble-name-modal absolute left-full top-1/2 transform -translate-y-1/2 ml-2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 transition-opacity duration-200">${bubble.bubble_name}</div>
                         </a>
                     `;

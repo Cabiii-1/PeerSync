@@ -49,7 +49,6 @@ $stmt->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timeline Thread</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -171,9 +170,8 @@ $stmt->close();
         </div>
         <div class="flex items-center space-x-4">
             <!-- Notifications Button -->
-            <button id="notificationsButton" class="text-white hover:text-gray-200 relative">
+            <button id="notificationsButton" class="text-white hover:text-gray-200">
                 <i class="fas fa-bell text-xl"></i>
-                <span class="notification-badge hidden absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">0</span>
             </button>
             <a href="exploreBubble.php" class="ml-4 hover:bg-blue-400 p-2 rounded">
                 <i class="fas fa-globe fa-lg"></i>
@@ -240,6 +238,7 @@ $stmt->close();
                 });
                 </script>
                 <!-- Display posts here -->
+                <?php if (!empty($posts)): ?>
                 <?php foreach ($posts as $post): ?>
                     <?php
                     // Fetch the number of comments for each post
@@ -304,7 +303,6 @@ $stmt->close();
                                     <div id="postMenu-<?= $post['id'] ?>" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
                                         <?php if ($post['user_id'] == $logged_in_user_id): ?>
                                             <!-- Edit and Delete options for post owner -->
-
                                             <a href="editPost.php?post_id=<?= $post['id'] ?>" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                 <i class="fas fa-edit mr-2"></i>Edit Post
                                             </a>
@@ -372,39 +370,90 @@ $stmt->close();
                         </div>
                     </div>
                 <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="w-full text-center py-12 bg-white rounded-xl shadow-md">
+                        <div class="max-w-xl mx-auto p-6">
+                            <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-700 mb-2">Your Timeline is Empty</h3>
+                            <p class="text-gray-500 mb-6">Join bubbles to see posts from your communities! Start by exploring available bubbles or create your own.</p>
+                            <div class="space-x-4">
+                                <a href="exploreBubble.php" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors inline-flex items-center">
+                                    <i class="fas fa-compass mr-2"></i>Explore Bubbles
+                                </a>
+                                <button onclick="document.getElementById('createBubbleModal').style.display='block'" class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors inline-flex items-center">
+                                    <i class="fas fa-plus mr-2"></i>Create Bubble
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
         </div>
 
-    <!-- Right Sidebar -->
-    <aside class="w-64 bg-white p-4 overflow-auto fixed right-0 top-16 h-full shadow-lg">
-        <div class="space-y-6">
+<!-- Right Sidebar -->
+<aside class="w-64 bg-white p-6 overflow-auto fixed right-0 top-16 h-full shadow-lg border-l border-gray-100">
+    <div class="space-y-8">
         <!-- Home Section -->
-        <div>
-            <h2 class="text-xl font-semibold mb-2">Home</h2>
-            <p class="text-sm text-gray-600 mb-4">
-            Your home PeerSync frontpage. Come here to check in with your favorite bubble community!
+        <div class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl">
+            <h2 class="text-xl font-semibold mb-3 text-gray-800 flex items-center">
+                <i class="fas fa-home mr-2 text-blue-500"></i>
+                Home
+            </h2>
+            <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+                Your PeerSync hub for connecting with your favorite bubble communities!
             </p>
-            <button class="w-full mb-2 py-2 px-4 text-white rounded hover:bg-blue-600 transition duration-300" id="createPostButton" style="background-color: rgb(70 130 180 / var(--tw-bg-opacity)); /* #4682b4 */">Create Post</button>
-            <button class="w-full py-2 px-4 text-white rounded hover:bg-blue-600 transition duration-300" id="createBubbleButton" style="background-color: rgb(70 130 180 / var(--tw-bg-opacity)); /* #4682b4 */">Create Bubble</button>
+            <div class="space-y-2">
+                <button id="createPostButton" 
+                        class="w-full py-2.5 px-4 text-white rounded-lg hover:bg-blue-600 transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center shadow-sm" 
+                        style="background-color: rgb(70 130 180 / var(--tw-bg-opacity));">
+                    <i class="fas fa-plus-circle mr-2"></i>
+                    Create Post
+                </button>
+                <button id="createBubbleButton" 
+                        class="w-full py-2.5 px-4 text-white rounded-lg hover:bg-blue-600 transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center shadow-sm" 
+                        style="background-color: rgb(70 130 180 / var(--tw-bg-opacity));">
+                    <i class="fas fa-users mr-2"></i>
+                    Create Bubble
+                </button>
+            </div>
         </div>
 
         <!-- Notebook Section -->
-        <div>
-            <h2 class="text-xl font-semibold mb-2">Notebook</h2>
-            <p class="text-sm text-gray-600">
-            Your home PeerSync frontpage. Come here to check in with your favorite bubble community!
+        <div class="bg-gradient-to-br from-purple-50 to-white p-4 rounded-xl">
+            <h2 class="text-xl font-semibold mb-3 text-gray-800 flex items-center">
+                <i class="fas fa-book mr-2 text-purple-500"></i>
+                Notebook
+            </h2>
+            <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+                Organize your thoughts and collaborate with your peers using our smart notebook feature.
             </p>
+            <a href="notebook.php" class="block w-full py-2.5 px-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transform hover:scale-[1.02] transition-all duration-300 text-center shadow-sm">
+                <i class="fas fa-pencil-alt mr-2"></i>
+                Open Notebook
+            </a>
         </div>
 
         <!-- PeerSync Premium Section -->
-        <div>
-            <h2 class="text-xl font-semibold mb-2">PeerSync Premium</h2>
-            <p class="text-sm text-gray-600 mb-4">Unlock exclusive features and content with PeerSync Premium.</p>
-            <a href="sub.html" target="_blank" class="block w-full py-2 bg-yellow-500 text-white text-center rounded hover:bg-yellow-600 transition duration-300">Learn More</a>
+        <div class="relative overflow-hidden bg-gradient-to-br from-yellow-50 to-white p-4 rounded-xl">
+            <div class="absolute top-0 right-0 transform translate-x-2 -translate-y-2">
+                <i class="fas fa-crown text-4xl text-yellow-300 opacity-20"></i>
+            </div>
+            <h2 class="text-xl font-semibold mb-3 text-gray-800 flex items-center">
+                <i class="fas fa-crown mr-2 text-yellow-500"></i>
+                Premium
+            </h2>
+            <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+                Unlock exclusive features and enhance your PeerSync experience with Premium.
+            </p>
+            <a href="sub.html" target="_blank" 
+               class="block w-full py-2.5 px-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-lg hover:from-yellow-500 hover:to-yellow-600 transform hover:scale-[1.02] transition-all duration-300 text-center shadow-sm">
+                <i class="fas fa-star mr-2"></i>
+                Upgrade Now
+            </a>
         </div>
-        </div>
-    </aside>
+    </div>
+</aside>
 
     <!-- Modal for creating a new post -->
     <div id="createPostModal" class="modal">
@@ -469,19 +518,13 @@ $stmt->close();
 
     <!-- Notifications Modal -->
     <div id="notificationsModal" class="modal">
-        <div class="modal-content max-w-lg mx-auto">
-            <div class="flex justify-between items-center mb-4 border-b pb-4">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">Notifications</h2>
-                <div class="flex items-center gap-4">
-                    <button id="markAllReadBtn" class="text-sm text-blue-600 hover:text-blue-800">Mark all as read</button>
-                    <span id="closeNotificationsModal" class="close cursor-pointer">&times;</span>
-                </div>
+                <span id="closeNotificationsModal" class="close cursor-pointer">&times;</span>
             </div>
-            <div id="notificationsList" class="space-y-4 max-h-[70vh] overflow-y-auto">
+            <div id="notificationsList" class="space-y-4">
                 <!-- Notifications will be dynamically loaded here -->
-            </div>
-            <div id="notificationsLoader" class="text-center py-4 hidden">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
             </div>
         </div>
     </div>
@@ -714,76 +757,7 @@ $stmt->close();
     </script>
     <script>
     $(document).ready(function() {
-        // Notifications functionality
-        let notificationsOffset = 0;
-        let isLoadingNotifications = false;
-
-        async function loadNotifications() {
-            if (isLoadingNotifications) return;
-            
-            isLoadingNotifications = true;
-            $('#notificationsLoader').removeClass('hidden');
-
-            try {
-                const response = await fetch(`api/get_notifications.php?offset=${notificationsOffset}`);
-                const html = await response.text();
-                
-                if (notificationsOffset === 0) {
-                    $('#notificationsList').empty();
-                }
-                
-                $('#notificationsList').append(html);
-                notificationsOffset += 10;
-                
-            } catch (error) {
-                $('#notificationsList').html("<div class='text-red-500 text-center p-4'>Failed to load notifications</div>");
-            }
-            
-            isLoadingNotifications = false;
-            $('#notificationsLoader').addClass('hidden');
-        }
-
-        // Load more notifications when scrolling to bottom
-        $('#notificationsList').on('scroll', function() {
-            if ($(this).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 20) {
-                loadNotifications();
-            }
-        });
-
-        // Event Listeners
-        $('#notificationsButton').on('click', function() {
-            notificationsOffset = 0;
-            loadNotifications();
-        });
-
-        $('#markAllReadBtn').on('click', function() {
-            fetch('api/mark_notifications_read.php', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    $('.notification-item').removeClass('bg-blue-50').addClass('bg-white');
-                    updateNotificationBadge(0);
-                }
-            })
-            .catch(error => {
-                console.error('Error marking notifications as read:', error);
-            });
-        });
-
-        $('#closeNotificationsModal').on('click', function() {
-            $('#notificationsModal').hide();
-        });
-
-        $(window).on('click', function(event) {
-            if ($(event.target).is('#notificationsModal')) {
-                $('#notificationsModal').hide();
-            }
-        });
-
-        // Like button functionality
-        $('.like-button').on('click', function() {
+        $('.like-button').click(function() {
             const button = $(this);
             const postId = button.data('post-id');
             
@@ -795,9 +769,14 @@ $stmt->close();
                     try {
                         const data = JSON.parse(response);
                         if (data.success) {
+                            // Toggle the liked state
                             button.toggleClass('liked');
+                            
+                            // Update the like count text
                             const likeCountText = data.likes === 1 ? '1 Like' : data.likes + ' Likes';
                             button.find('span').text(likeCountText);
+                            
+                            // Add animation effect
                             button.find('i').addClass('animate-bounce');
                             setTimeout(() => {
                                 button.find('i').removeClass('animate-bounce');
@@ -814,92 +793,26 @@ $stmt->close();
                 }
             });
         });
-
-        async function openPostModal(postId) {
-            try {
-                const response = await fetch(`api/get_post.php?post_id=${postId}`);
-                const post = await response.json();
-                
-                if (post) {
-                    // Close notifications modal
-                    $('#notificationsModal').hide();
-                    
-                    // Fill and show post modal
-                    $('#postModalTitle').text(post.title || '');
-                    $('#postModalContent').text(post.message || '');
-                    if (post.image) {
-                        $('#postModalImage').attr('src', `data:image/jpeg;base64,${post.image}`).show();
-                    } else {
-                        $('#postModalImage').hide();
-                    }
-                    $('#postModal').show();
-                    
-                    // Mark notification as read
-                    fetch('api/mark_notification_read.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ post_id: postId })
-                    });
-                }
-            } catch (error) {
-                console.error('Error opening post:', error);
-            }
-        }
     });
     </script>
 
     <script>
-        // Toggle post menu dropdown
-        function togglePostMenu(postId) {
-            const menu = document.getElementById(`postMenu-${postId}`);
-            // Close all other open menus first
-            document.querySelectorAll('[id^="postMenu-"]').forEach(m => {
-                if (m.id !== `postMenu-${postId}`) {
-                    m.classList.add('hidden');
-                }
-            });
-            menu.classList.toggle('hidden');
+        // Notifications Modal functionality
+        const notificationsModal = document.getElementById('notificationsModal');
+        const notificationsBtn = document.getElementById('notificationsButton');
+        const closeNotificationsModal = document.getElementById('closeNotificationsModal');
+
+        notificationsBtn.onclick = function() {
+            notificationsModal.style.display = "block";
         }
 
-        // Close post menus when clicking outside
-        document.addEventListener('click', function(event) {
-            const menuButton = event.target.closest('.relative');
-            if (!menuButton) {
-                document.querySelectorAll('[id^="postMenu-"]').forEach(menu => {
-                    menu.classList.add('hidden');
-                });
-            }
-        });
+        closeNotificationsModal.onclick = function() {
+            notificationsModal.style.display = "none";
+        }
 
-        // Function to handle post deletion
-        function deletePost(postId) {
-            if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-                fetch(`deletePost.php?post_id=${postId}`, {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Remove the post element from DOM and show success message
-                        const postElement = document.querySelector(`[data-post-id="${postId}"]`).closest('.bg-white');
-                        postElement.remove();
-                        // Show success message
-                        const successMessage = document.createElement('div');
-                        successMessage.className = 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4';
-                        successMessage.innerHTML = 'Post deleted successfully';
-                        document.querySelector('.p-4.mx-auto').insertBefore(successMessage, document.querySelector('.mb-4'));
-                        // Remove success message after 3 seconds
-                        setTimeout(() => successMessage.remove(), 3000);
-                    } else {
-                        alert(data.error || 'Failed to delete post. Please try again.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the post.');
-                });
+        window.onclick = function(event) {
+            if (event.target == notificationsModal) {
+                notificationsModal.style.display = "none";
             }
         }
     </script>
@@ -957,27 +870,8 @@ $stmt->close();
 </script>
 
 <script>
-    // Notifications Modal functionality
-    const notificationsModal = document.getElementById('notificationsModal');
-    const notificationsBtn = document.getElementById('notificationsButton');
-    const closeNotificationsModal = document.getElementById('closeNotificationsModal');
-
-    notificationsBtn.onclick = function() {
-        notificationsModal.style.display = "block";
-    }
-
-    closeNotificationsModal.onclick = function() {
-        notificationsModal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-        if (event.target == notificationsModal) {
-            notificationsModal.style.display = "none";
-        }
-    }
-
-        // Function to toggle post menu dropdown
-        function togglePostMenu(postId) {
+    // Function to toggle post menu dropdown
+    function togglePostMenu(postId) {
         const menu = document.getElementById(`postMenu-${postId}`);
         // Close all other open menus first
         document.querySelectorAll('[id^="postMenu-"]').forEach(m => {
@@ -1028,5 +922,46 @@ $stmt->close();
         }
     }
 </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        $('.like-button').click(function() {
+            const button = $(this);
+            const postId = button.data('post-id');
+            
+            $.ajax({
+                url: 'toggle_like.php',
+                type: 'POST',
+                data: { post_id: postId },
+                success: function(response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.success) {
+                            // Toggle the liked state
+                            button.toggleClass('liked');
+                            
+                            // Update the like count text
+                            const likeCountText = data.likes === 1 ? '1 Like' : data.likes + ' Likes';
+                            button.find('span').text(likeCountText);
+                            
+                            // Add animation effect
+                            button.find('i').addClass('animate-bounce');
+                            setTimeout(() => {
+                                button.find('i').removeClass('animate-bounce');
+                            }, 1000);
+                        } else {
+                            console.error('Like toggle failed:', data.message);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ajax request failed:', error);
+                }
+            });
+        });
+    });
+    </script>
 </body>
 </html>

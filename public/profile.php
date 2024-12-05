@@ -38,9 +38,38 @@ $result = $stmt->get_result();
 $userData = $result->fetch_assoc();
 $stmt->close();
 
+// Fetch user's joined bubbles
+$bubbles_sql = "SELECT b.*, ub.joined_at,
+                (SELECT COUNT(*) FROM user_bubble WHERE bubble_id = b.id) as member_count 
+                FROM bubbles b 
+                JOIN user_bubble ub ON b.id = ub.bubble_id 
+                WHERE ub.user_id = ? 
+                ORDER BY ub.joined_at DESC";
+$bubbles_stmt = $conn->prepare($bubbles_sql);
+$bubbles_stmt->bind_param("i", $userId);
+$bubbles_stmt->execute();
+$bubbles_result = $bubbles_stmt->get_result();
+$userBubbles = $bubbles_result->fetch_all(MYSQLI_ASSOC);
+$bubbles_stmt->close();
+
+// Fetch user's posts with bubble information
+$posts_sql = "SELECT bp.*, b.bubble_name 
+              FROM bubble_posts bp 
+              JOIN bubbles b ON bp.bubble_id = b.id 
+              WHERE bp.user_id = ? 
+              ORDER BY bp.created_at DESC";
+$posts_stmt = $conn->prepare($posts_sql);
+$posts_stmt->bind_param("i", $userId);
+$posts_stmt->execute();
+$posts_result = $posts_stmt->get_result();
+$userPosts = [];
+while ($post = $posts_result->fetch_assoc()) {
+    $userPosts[] = $post;
+}
+$posts_stmt->close();
+
 $conn->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -63,7 +92,7 @@ $conn->close();
             width: 600px;
             height: 600px;
             border-radius: 50%;
-            background-color: #e4f7f7;
+            background-color: rgb(70 130 180 / 0.1);
             margin: -50px 50px;
             z-index: -1;
         }
@@ -75,7 +104,7 @@ $conn->close();
             width: 300px;
             height: 300px;
             border-radius: 50%;
-            background-color: #97ebdb;
+            background-color: rgb(43 84 126 / 0.1);
             bottom: -50px;
             right: -50px;
             z-index: -1;
@@ -91,7 +120,7 @@ $conn->close();
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #00c2c7, #0086ad);
+            background: linear-gradient(135deg, rgb(43 84 126), rgb(70 130 180));
             border-radius: 15px;
         }
 
@@ -107,13 +136,30 @@ $conn->close();
             left: -5px;
             right: -5px;
             bottom: -5px;
-            border: 3px solid #00c2c7;
+            border: 3px solid rgb(70 130 180);
             border-radius: 50%;
         }
 
         .tab-active {
-            color: #00c2c7;
-            border-bottom: 3px solid #00c2c7;
+            color: rgb(43 84 126);
+            border-bottom: 3px solid rgb(43 84 126);
+        }
+
+        button[type="submit"], .btn-primary {
+            background-color: rgb(70 130 180);
+            transition: all 0.3s ease;
+        }
+
+        button[type="submit"]:hover, .btn-primary:hover {
+            background-color: rgb(43 84 126);
+        }
+
+        #edit-profile-picture {
+            background-color: rgb(70 130 180);
+        }
+
+        #edit-profile-picture:hover {
+            background-color: rgb(43 84 126);
         }
 
         .modal {
@@ -143,18 +189,49 @@ $conn->close();
 </head>
 <body class="min-h-screen bg-gray-50">
     <!-- Navbar -->
-    <nav class="bg-secondary-100 text-white flex justify-between items-center fixed w-full top-0 z-50 px-4 py-2" style="background-color: rgb(43 84 126 / var(--tw-bg-opacity));">
-        <div class="flex items-center">
-            <a href="indexTimeline.php"><img src="../public/ps.png" alt="Peerync Logo" class="h-12 w-12"></a>
-            <span class="text-2xl font-bold ml-2">PeerSync</span>
-        </div>
-        <div class="flex items-center space-x-4">
-            <a href="exploreBubble.php" class="text-gray-600">
-                <i class="uil uil-compass"></i> Explore
-            </a>
-            <a href="indexBubble.php" class="text-gray-600">
-                <i class="uil uil-comments"></i> Bubbles
-            </a>
+    <nav class="bg-white shadow-md fixed w-full top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Left side - Logo and Brand -->
+                <div class="flex items-center">
+                    <a href="indexTimeline.php" class="flex items-center">
+                        <img src="../public/ps.png" alt="PeerSync Logo" class="h-8 w-8 mr-2">
+                        <span class="text-xl font-bold text-gray-800">PeerSync</span>
+                    </a>
+                </div>
+
+                <!-- Center - Navigation Links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="indexTimeline.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                        <i class="uil uil-estate mr-2"></i>
+                        Home
+                    </a>
+                    <a href="exploreBubble.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                        <i class="uil uil-compass mr-2"></i>
+                        Explore
+                    </a>
+                    <a href="bubblePage.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                        <i class="uil uil-comments mr-2"></i>
+                        Bubbles
+                    </a>
+                    <a href="notebook.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                        <i class="uil uil-notes mr-2"></i>
+                        Notes
+                    </a>
+                </div>
+
+                <!-- Right side - Profile -->
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <a href="profile.php" class="flex items-center text-gray-600 hover:text-gray-900">
+                            <img src="<?php echo !empty($userData['profile_image']) ? htmlspecialchars($userData['profile_image']) : 'profile_page/default_profile.png'; ?>" 
+                                 alt="Profile" 
+                                 class="h-8 w-8 rounded-full object-cover border-2 border-gray-200">
+                            <span class="ml-2 text-sm font-medium hidden md:block"><?php echo htmlspecialchars($userData['username']); ?></span>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -175,17 +252,18 @@ $conn->close();
                             <h1 class="text-3xl font-bold text-gray-800"><?php echo htmlspecialchars($userData['username']); ?></h1>
                             <p class="text-gray-600"><?php echo htmlspecialchars($userData['email']); ?></p>
                         </div>
-                        <button id="edit-profile-picture" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        <button id="edit-profile-picture" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-300 transform hover:scale-[1.02] shadow-sm">
+                            <i class="uil uil-edit mr-2"></i>
                             Edit Profile
                         </button>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4 mt-6">
-                        <div class="stat-card p-4 text-white text-center">
+                        <div class="stat-card p-4 text-white text-center transform hover:scale-[1.02] transition-all duration-300">
                             <div class="text-3xl font-bold"><?php echo $userData['bubble_count']; ?></div>
                             <div class="text-sm">Bubbles Joined</div>
                         </div>
-                        <div class="stat-card p-4 text-white text-center">
+                        <div class="stat-card p-4 text-white text-center transform hover:scale-[1.02] transition-all duration-300">
                             <div class="text-3xl font-bold"><?php echo $userData['post_count']; ?></div>
                             <div class="text-sm">Posts Created</div>
                         </div>
@@ -197,13 +275,13 @@ $conn->close();
         <!-- Profile Navigation -->
         <div class="profile-card mb-8">
             <div class="flex justify-around p-4">
-                <button class="tab-button tab-active px-4 py-2" data-tab="posts">
+                <button onclick="showTab('posts')" class="tab-button tab-active px-4 py-2 transition-all duration-300" data-tab="posts">
                     <i class="uil uil-postcard mr-1"></i> Posts
                 </button>
-                <button class="tab-button px-4 py-2" data-tab="bubbles">
+                <button onclick="showTab('bubbles')" class="tab-button px-4 py-2 transition-all duration-300" data-tab="bubbles">
                     <i class="uil uil-circle mr-1"></i> Bubbles
                 </button>
-                <button class="tab-button px-4 py-2" data-tab="settings">
+                <button onclick="showTab('settings')" class="tab-button px-4 py-2 transition-all duration-300" data-tab="settings">
                     <i class="uil uil-setting mr-1"></i> Settings
                 </button>
             </div>
@@ -212,17 +290,88 @@ $conn->close();
         <!-- Tab Content -->
         <div class="tab-content" id="posts-content">
             <div class="grid gap-6">
-                <!-- Loading placeholder -->
-                <div class="animate-pulse profile-card p-6">
-                    <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                    <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
+                <?php if (empty($userPosts)): ?>
+                    <div class="profile-card p-8 text-center">
+                        <i class="uil uil-comment-alt-notes text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Posts Yet</h3>
+                        <p class="text-gray-500">Start sharing in your bubbles to see your posts here!</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($userPosts as $post): ?>
+                        <div class="profile-card p-6 hover:shadow-lg transition-all duration-300">
+                            <!-- Post Header -->
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <img src="<?php echo htmlspecialchars($userData['profile_image'] ?? 'default-profile.png'); ?>" 
+                                         alt="Profile" 
+                                         class="w-10 h-10 rounded-full object-cover">
+                                    <div>
+                                        <h3 class="font-semibold text-gray-800"><?php echo htmlspecialchars($userData['username']); ?></h3>
+                                        <div class="flex items-center text-sm text-gray-500">
+                                            <span class="inline-block px-2 py-1 rounded-full text-xs mr-2 bg-blue-100">
+                                                <?php echo htmlspecialchars($post['bubble_name']); ?>
+                                            </span>
+                                            <span><?php echo date('M j, Y', strtotime($post['created_at'])); ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Post Content -->
+                            <div class="mb-4">
+                                <p class="text-gray-700 whitespace-pre-wrap"><?php echo htmlspecialchars($post['message']); ?></p>
+                                <?php if (!empty($post['image'])): ?>
+                                    <div class="mt-4 rounded-lg overflow-hidden">
+                                        <img src="<?php echo htmlspecialchars($post['image']); ?>" 
+                                             alt="Post image" 
+                                             class="w-full h-48 object-cover hover:scale-105 transition-transform duration-300">
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Post Footer -->
+                            <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+                                <div class="text-sm text-gray-500">
+                                    <i class="uil uil-clock mr-1"></i>
+                                    <?php 
+                                        $timestamp = strtotime($post['created_at']);
+                                        $timeAgo = time() - $timestamp;
+                                        if ($timeAgo < 60) {
+                                            echo "Just now";
+                                        } elseif ($timeAgo < 3600) {
+                                            echo floor($timeAgo/60) . "m ago";
+                                        } elseif ($timeAgo < 86400) {
+                                            echo floor($timeAgo/3600) . "h ago";
+                                        } else {
+                                            echo floor($timeAgo/86400) . "d ago";
+                                        }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
 
         <div class="tab-content hidden" id="bubbles-content">
             <div class="grid md:grid-cols-2 gap-6" id="bubble-list">
-                <!-- Will be populated by JavaScript -->
+                <?php foreach ($userBubbles as $bubble): ?>
+                    <div class="profile-card p-6 hover:shadow-lg transition-all duration-300">
+                        <h3 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($bubble['bubble_name']); ?></h3>
+                        <p class="text-gray-600"><?php echo htmlspecialchars($bubble['description']); ?></p>
+                        <div class="flex justify-between items-center mt-4">
+                            <div class="text-sm text-gray-500">
+                                <i class="uil uil-users-alt mr-1"></i>
+                                <?php echo htmlspecialchars($bubble['member_count']); ?> members
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                <i class="uil uil-clock mr-1"></i>
+                                <?php echo date('M j, Y', strtotime($bubble['joined_at'])); ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
 
@@ -242,8 +391,25 @@ $conn->close();
                         <label class="block text-gray-700 mb-2">Bio</label>
                         <textarea class="w-full p-3 border rounded-lg" rows="4"></textarea>
                     </div>
-                    <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg">
+                    <button type="submit" class="btn-primary px-6 py-2 rounded-lg transform hover:scale-[1.02] transition-all duration-300 shadow-sm">
                         Save Changes
+                    </button>
+                </form>
+                <form id="change-password-form" class="space-y-6 mt-6">
+                    <div>
+                        <label class="block text-gray-700 mb-2">Current Password</label>
+                        <input type="password" id="current-password" class="w-full p-3 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2">New Password</label>
+                        <input type="password" id="new-password" class="w-full p-3 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2">Confirm New Password</label>
+                        <input type="password" id="confirm-password" class="w-full p-3 border rounded-lg">
+                    </div>
+                    <button type="submit" class="btn-primary px-6 py-2 rounded-lg transform hover:scale-[1.02] transition-all duration-300 shadow-sm">
+                        Change Password
                     </button>
                 </form>
             </div>
@@ -266,10 +432,10 @@ $conn->close();
                     <input type="file" id="profile_image" name="profile_image" accept="image/*" class="hidden">
                 </div>
                 <div class="flex justify-end space-x-3">
-                    <button type="button" class="px-4 py-2 text-gray-600" onclick="closeModal()">
+                    <button type="button" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-all duration-300" onclick="closeModal()">
                         Cancel
                     </button>
-                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg">
+                    <button type="submit" class="btn-primary px-4 py-2 rounded-lg transform hover:scale-[1.02] transition-all duration-300 shadow-sm">
                         Upload Picture
                     </button>
                 </div>
@@ -282,20 +448,25 @@ $conn->close();
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
 
-        function showTab(tabName) {
+        function showTab(tabId) {
+            // Hide all tab contents
             tabContents.forEach(content => {
-                content.style.display = content.id === `${tabName}-content` ? 'block' : 'none';
+                content.classList.add('hidden');
             });
 
-            tabButtons.forEach(btn => {
-                btn.classList.toggle('tab-active', btn.getAttribute('data-tab') === tabName);
+            // Remove active class from all buttons
+            tabButtons.forEach(button => {
+                button.classList.remove('tab-active');
             });
+
+            // Show selected tab content
+            document.getElementById(`${tabId}-content`).classList.remove('hidden');
+
+            // Add active class to clicked button
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('tab-active');
         }
 
-        // Set initial active tab
-        showTab('posts');
-
-        // Add click handlers to tabs
+        // Add click event listeners to tab buttons
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 showTab(button.getAttribute('data-tab'));
@@ -367,6 +538,44 @@ $conn->close();
             e.preventDefault();
             // Add your settings update logic here
             alert('Settings updated successfully');
+        });
+
+        // Change password form handling
+        document.getElementById('change-password-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match');
+                return;
+            }
+            
+            fetch('changePassword.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Password updated successfully');
+                    document.getElementById('change-password-form').reset();
+                } else {
+                    alert(data.error || 'Failed to update password');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating password');
+            });
         });
     </script>
 </body>
