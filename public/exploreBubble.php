@@ -29,12 +29,13 @@ $stmt->execute();
 $your_bubbles_result = $stmt->get_result();
 $stmt->close();
 
-// Fetch bubbles the user is not a member of
+// Fetch bubbles the user is not a member of and are public
 $sql = "SELECT b.id, b.bubble_name, b.profile_image, b.description, u.username AS creator, 
   (SELECT COUNT(*) FROM user_bubble ub WHERE ub.bubble_id = b.id) AS member_count 
   FROM bubbles b 
   JOIN users u ON b.creator_id = u.id
-  WHERE b.id NOT IN (SELECT bubble_id FROM user_bubble WHERE user_id = ?)";
+  WHERE b.id NOT IN (SELECT bubble_id FROM user_bubble WHERE user_id = ?)
+  AND b.status = 'public'";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -137,40 +138,67 @@ $conn->close();
     <div class="container mx-auto">
       <!-- Slider Placeholder -->
       <!--Image Slider-->
-    <div id="default-carousel" class="relative bg-blue-900 justify-center rounded-3xl" data-carousel="static">
+    <div id="default-carousel" class="relative bg-gradient-to-r from-blue-900 to-blue-800 rounded-3xl shadow-xl overflow-hidden" data-carousel="static">
         <div class="flex h-56 sm:h-64 xl:h-80 2xl:h-96 relative items-center justify-center">
-            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col items-center justify-center hidden" data-carousel-item>
-                <img src="image5 (2).png" class="h-64" alt="...">
-                <div class="p-5 flex flex-col justify-center items-center text-white">
-                    <h3>Don't let the journey be a solo journey.</h3>
+            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col md:flex-row items-center justify-between hidden p-8" data-carousel-item>
+                <div class="md:w-1/2 text-center md:text-left text-white space-y-4">
+                    <h2 class="text-3xl md:text-4xl font-bold leading-tight">Don't let the journey be a solo adventure</h2>
+                    <p class="text-lg text-blue-100">Join bubbles, share ideas, and grow together with like-minded peers.</p>
+                    <button class="mt-4 px-6 py-3 bg-white text-blue-900 rounded-full font-semibold hover:bg-blue-100 transition-all duration-300 transform hover:scale-105">
+                        Get Started
+                    </button>
+                </div>
+                <div class="md:w-1/2 flex justify-center items-center mt-4 md:mt-0">
+                    <img src="1.png" class="h-48 md:h-64 object-contain transform hover:scale-105 transition-all duration-500" alt="Collaboration">
                 </div>
             </div>
-            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col items-center justify-center hidden" data-carousel-item>
-                <img src="image6 (1).png" class="h-64" alt="...">
-                <div class="p-5 flex flex-col justify-center items-center text-white">
-                    <h3>This is the second image caption.</h3>
+
+            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col md:flex-row items-center justify-between hidden p-8" data-carousel-item>
+                <div class="md:w-1/2 text-center md:text-left text-white space-y-4">
+                    <h2 class="text-3xl md:text-4xl font-bold leading-tight">Share Your Knowledge</h2>
+                    <p class="text-lg text-blue-100">Create and join learning communities. Learn from peers worldwide.</p>
+                    <button class="mt-4 px-6 py-3 bg-white text-blue-900 rounded-full font-semibold hover:bg-blue-100 transition-all duration-300 transform hover:scale-105">
+                        Explore Bubbles
+                    </button>
+                </div>
+                <div class="md:w-1/2 flex justify-center items-center mt-4 md:mt-0">
+                    <img src="2.png" class="h-48 md:h-64 object-contain transform hover:scale-105 transition-all duration-500" alt="Knowledge Sharing">
                 </div>
             </div>
-            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col items-center justify-center hidden" data-carousel-item>
-                <img src="image7 (1).png" class="h-64" alt="...">
-                <div class="p-5 flex flex-col justify-center items-center text-white">
-                    <h3>This is the third image caption.</h3>
+
+            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col md:flex-row items-center justify-between hidden p-8" data-carousel-item>
+                <div class="md:w-1/2 text-center md:text-left text-white space-y-4">
+                    <h2 class="text-3xl md:text-4xl font-bold leading-tight">Build Your Network</h2>
+                    <p class="text-lg text-blue-100">Connect with peers who share your interests and goals.</p>
+                    <button class="mt-4 px-6 py-3 bg-white text-blue-900 rounded-full font-semibold hover:bg-blue-100 transition-all duration-300 transform hover:scale-105">
+                        Join Now
+                    </button>
+                </div>
+                <div class="md:w-1/2 flex justify-center items-center mt-4 md:mt-0">
+                    <img src="3.png" class="h-48 md:h-64 object-contain transform hover:scale-105 transition-all duration-500" alt="Networking">
                 </div>
             </div>
-            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col items-center justify-center hidden" data-carousel-item>
-                <img src="image8 (2).png" class="h-64" alt="...">
-                <div class="p-5 flex flex-col justify-center items-center text-white">
-                    <h3>This is the fourth image caption.</h3>
+
+            <div class="absolute inset-0 duration-700 ease-in-out flex flex-col md:flex-row items-center justify-between hidden p-8" data-carousel-item>
+                <div class="md:w-1/2 text-center md:text-left text-white space-y-4">
+                    <h2 class="text-3xl md:text-4xl font-bold leading-tight">Discover New Opportunities</h2>
+                    <p class="text-lg text-blue-100">Explore diverse bubbles and find your perfect community.</p>
+                    <button class="mt-4 px-6 py-3 bg-white text-blue-900 rounded-full font-semibold hover:bg-blue-100 transition-all duration-300 transform hover:scale-105">
+                        Start Exploring
+                    </button>
+                </div>
+                <div class="md:w-1/2 flex justify-center items-center mt-4 md:mt-0">
+                    <img src="image8 (2).png" class="h-48 md:h-64 object-contain transform hover:scale-105 transition-all duration-500" alt="Opportunities">
                 </div>
             </div>
         </div>
 
         <!-- Slider indicators -->
         <div class="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex space-x-3 z-30">
-            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white" data-slide-to="0"></button>
-            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white" data-slide-to="1"></button>
-            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white" data-slide-to="2"></button>
-            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white" data-slide-to="3"></button>
+            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all duration-300" data-slide-to="0"></button>
+            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all duration-300" data-slide-to="1"></button>
+            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all duration-300" data-slide-to="2"></button>
+            <button class="w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all duration-300" data-slide-to="3"></button>
         </div>
     </div>
 
@@ -230,41 +258,6 @@ $conn->close();
         <button id="create-bubble-button" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
           Create Bubble
         </button>
-      </div>
-
-     
-
-      <div id="your-bubbles" class="tab-content">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-8 mt-20 mx-auto max-w-[1920px] px-4">
-          <?php while ($bubble = $your_bubbles_result->fetch_assoc()): ?>
-            <div class="bubble-card relative bg-gray-200 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:-translate-y-1 flex flex-col justify-between h-80 w-full p-4">
-              <div class="flex-grow">
-                <img src="data:image/jpeg;base64,<?php echo base64_encode($bubble['profile_image']); ?>" alt="<?php echo htmlspecialchars($bubble['bubble_name']); ?>" class="w-full h-40 object-cover mb-4">
-                <div class="text-lg font-bold mb-2 truncate" title="<?php echo htmlspecialchars($bubble['bubble_name']); ?>">
-                  <?php echo (strlen($bubble['bubble_name']) > 10) ? substr(htmlspecialchars($bubble['bubble_name']), 0, 10) . '...' : htmlspecialchars($bubble['bubble_name']); ?>
-                </div>
-                <div class="text-sm text-gray-600 mb-2">
-                  <div class="description-container">
-                    <div class="description-text line-clamp-2">
-                      <?php echo (strlen($bubble['description']) > 10) ? substr(htmlspecialchars($bubble['description']), 0, 10) . '...' : htmlspecialchars($bubble['description']); ?>
-                    </div>
-                    <?php if (strlen($bubble['description']) > 10): ?>
-                      <button class="see-more-btn text-blue-500 hover:text-blue-600 text-sm">See more</button>
-                    <?php endif; ?>
-                  </div>
-                </div>
-                <div class="flex justify-between items-center mt-2">
-                  <div>
-                    <div class="text-sm text-gray-500 truncate" title="Created by: <?php echo htmlspecialchars($bubble['creator']); ?>">
-                      Created by: <?php echo (strlen($bubble['creator']) > 10) ? substr(htmlspecialchars($bubble['creator']), 0, 10) . '...' : htmlspecialchars($bubble['creator']); ?>
-                    </div>
-                    <div class="text-sm text-gray-500">Members: <?php echo $bubble['member_count']; ?></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <?php endwhile; ?>
-        </div>
       </div>
 
       <div id="available-bubbles" class="tab-content active">
@@ -337,7 +330,8 @@ $conn->close();
             button.addEventListener('click', function(e) {
               const descriptionText = this.previousElementSibling;
               const isExpanded = descriptionText.classList.contains('expanded');
-              
+　
+　
               if (isExpanded) {
                 descriptionText.classList.remove('expanded');
                 this.textContent = 'See more';
@@ -624,7 +618,8 @@ $conn->close();
 
               const bubbles = data.bubbles;
               bubblesGrid.innerHTML = '';
-              
+　
+　
               if (bubbles.length === 0) {
                 showError('No bubbles found matching your search.');
                 return;
@@ -633,7 +628,8 @@ $conn->close();
               bubbles.forEach(bubble => {
                 bubblesGrid.innerHTML += createBubbleCard(bubble);
               });
-              
+　
+　
               // Initialize see more buttons for search results
               initializeSeeMoreButtons();
             })
@@ -697,24 +693,22 @@ $conn->close();
          });
         }
 
-        
+        // Fetch joined bubbles on page load
+        document.addEventListener("DOMContentLoaded", fetchJoinedBubbles);
 
-            // Fetch joined bubbles on page load
-            document.addEventListener("DOMContentLoaded", fetchJoinedBubbles);
-
-                // Tab switching functionality
-                document.querySelectorAll('.tab').forEach(tab => {
-                  tab.addEventListener('click', function() {
-                    document.querySelectorAll('.tab').forEach(t => {
-                      t.classList.remove('active');
-                      t.classList.remove('bg-sky-800');
-                    });
-                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                    this.classList.add('active');
-                    this.classList.add('bg-sky-800');
-                    document.getElementById(this.getAttribute('data-tab')).classList.add('active');
-                  });
-                });
+        // Tab switching functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => {
+              t.classList.remove('active');
+              t.classList.remove('bg-sky-800');
+            });
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            this.classList.add('active');
+            this.classList.add('bg-sky-800');
+            document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+          });
+        });
     </script>
 </body>
 </html>

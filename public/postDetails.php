@@ -320,13 +320,6 @@ function joinBubble() {
                                 <span class="text-sm">Share</span>
                             </button>
                         </div>
-
-                        <!-- Report Button -->
-                        <button onclick="openReportModal()" 
-                                class="flex items-center space-x-2 text-gray-400 hover:text-red-500 transition-colors text-sm">
-                            <i class="fas fa-flag"></i>
-                            <span>Report</span>
-                        </button>
                     </div>
                     <style>
                         /* Like button styles */

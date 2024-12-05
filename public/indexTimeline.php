@@ -61,104 +61,21 @@ $stmt->close();
         .navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; }
         .content { margin-top: 64px; margin-left: 80px; transition: margin-left 0.3s; }
         .right-sidebar { position: fixed; right: 0; height: calc(100% - 64px); overflow-y: auto; z-index: 100; margin-top: 80px; }
-
-        /* Feedback Modal Styles */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .feedback-modal {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            max-width: 500px;
-            width: 90%;
-            position: relative;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #2b547e;
-        }
-        .close-button {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #666;
-        }
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-        .radio-option {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-        }
-        .next-button {
-            background-color: #4682b4;
-            color: white;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
-        .next-button:hover {
-            background-color: #3a6d96;
-        }
-        
-        /* Like button styles */
-        .like-button {
-            transition: all 0.3s ease;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .like-button.liked {
-            color: rgb(43, 84, 126);
-            font-weight: 600;
-            background-color: rgba(43, 84, 126, 0.1);
-        }
-        
-        .like-button:hover {
-            color: rgb(70, 130, 180);
-            background-color: rgba(70, 130, 180, 0.1);
-        }
-        
-        .like-button i {
-            transition: transform 0.2s ease;
-        }
-        
-        .like-button.liked i {
-            transform: scale(1.1);
-            color: rgb(43, 84, 126);
-        }
-
-        .like-button:not(.liked) {
-            color: #6B7280;
-        }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .feedback-modal { background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%; position: relative; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .modal-title { font-size: 1.5rem; font-weight: bold; color: #2b547e; }
+        .close-button { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+        .radio-group { display: flex; flex-direction: column; gap: 1rem; margin: 1.5rem 0; }
+        .radio-option { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        .next-button { background-color: #4682b4; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
+        .next-button:hover { background-color: #3a6d96; }
+        .like-button { transition: all 0.3s ease; padding: 0.5rem 1rem; border-radius: 0.375rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .like-button.liked { color: rgb(43, 84, 126); font-weight: 600; background-color: rgba(43, 84, 126, 0.1); }
+        .like-button:hover { color: rgb(70, 130, 180); background-color: rgba(70, 130, 180, 0.1); }
+        .like-button i { transition: transform 0.2s ease; }
+        .like-button.liked i { transform: scale(1.1); color: rgb(43, 84, 126); }
+        .like-button:not(.liked) { color: #6B7280; }
     </style>
 </head>
 <body class="bg-blue-50">
@@ -169,10 +86,6 @@ $stmt->close();
             <span class="text-2xl font-bold">PeerSync</span>
         </div>
         <div class="flex items-center space-x-4">
-            <!-- Notifications Button -->
-            <button id="notificationsButton" class="text-white hover:text-gray-200">
-                <i class="fas fa-bell text-xl"></i>
-            </button>
             <a href="exploreBubble.php" class="ml-4 hover:bg-blue-400 p-2 rounded">
                 <i class="fas fa-globe fa-lg"></i>
             </a>

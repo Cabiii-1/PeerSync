@@ -76,8 +76,9 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile | <?php echo htmlspecialchars($userData['username']); ?></title>
+    <link rel="stylesheet" href="style.css">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://unicons.iconscout.com/release/v2.1.9/css/unicons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* Background design */
         body {
@@ -185,56 +186,43 @@ $conn->close();
             width: 90%;
             margin: 2rem auto;
         }
+        .navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; }
+
     </style>
 </head>
 <body class="min-h-screen bg-gray-50">
     <!-- Navbar -->
-    <nav class="bg-white shadow-md fixed w-full top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between items-center h-16">
-                <!-- Left side - Logo and Brand -->
-                <div class="flex items-center">
-                    <a href="indexTimeline.php" class="flex items-center">
-                        <img src="../public/ps.png" alt="PeerSync Logo" class="h-8 w-8 mr-2">
-                        <span class="text-xl font-bold text-gray-800">PeerSync</span>
-                    </a>
-                </div>
-
-                <!-- Center - Navigation Links -->
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="indexTimeline.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                        <i class="uil uil-estate mr-2"></i>
-                        Home
-                    </a>
-                    <a href="exploreBubble.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                        <i class="uil uil-compass mr-2"></i>
-                        Explore
-                    </a>
-                    <a href="bubblePage.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                        <i class="uil uil-comments mr-2"></i>
-                        Bubbles
-                    </a>
-                    <a href="notebook.php" class="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                        <i class="uil uil-notes mr-2"></i>
-                        Notes
-                    </a>
-                </div>
-
-                <!-- Right side - Profile -->
-                <div class="flex items-center space-x-4">
-                    <div class="relative">
-                        <a href="profile.php" class="flex items-center text-gray-600 hover:text-gray-900">
-                            <img src="<?php echo !empty($userData['profile_image']) ? htmlspecialchars($userData['profile_image']) : 'profile_page/default_profile.png'; ?>" 
-                                 alt="Profile" 
-                                 class="h-8 w-8 rounded-full object-cover border-2 border-gray-200">
-                            <span class="ml-2 text-sm font-medium hidden md:block"><?php echo htmlspecialchars($userData['username']); ?></span>
-                        </a>
-                    </div>
+    <nav class="navbar bg-secondary-100 text-white  flex justify-between items-center" style="background-color: rgb(43 84 126 / var(--tw-bg-opacity)) /* #2b547e */;">
+        <div class="flex items-center">
+            <a href="indexTimeline.php"><img src="../public/ps.png" alt="Peerync Logo" class="h-18 w-16"></a>
+            <span class="text-2xl font-bold">PeerSync</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <!-- Notifications Button -->
+            <button id="notificationsButton" class="text-white hover:text-gray-200">
+                <i class="fas fa-bell text-xl"></i>
+            </button>
+            <a href="exploreBubble.php" class="ml-4 hover:bg-blue-400 p-2 rounded">
+                <i class="fas fa-globe fa-lg"></i>
+            </a>
+            <a href="indexBubble.php" class="ml-4 hover:bg-blue-400 p-2 rounded">
+                <i class="fas fa-comments fa-lg"></i>
+            </a>
+            <a href="notebook.php" class="ml-4 hover:bg-blue-400 p-2 rounded">
+                <i class="fas fa-book fa-lg"></i>
+            </a>
+            <div class="relative ml-4 p-4">
+                <img src="<?php echo !empty($userData['profile_image']) ? htmlspecialchars($userData['profile_image']) : 'profile_page/default_profile.png'; ?>" 
+                     alt="Profile Image" 
+                     class="w-10 h-10 rounded-full cursor-pointer object-cover border-2 border-white/20" 
+                     id="profileImage">
+                <div class="dropdown-menu absolute right-0 mt-1 w-48 bg-white border border-gray-300 rounded shadow-lg hidden">
+                    <a href="profile.php" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Profile</a>
+                    <a href="logout.php" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Logout</a>
                 </div>
             </div>
         </div>
     </nav>
-
     <!-- Main Content -->
     <div class="container mx-auto px-4 pt-20">
         <!-- Profile Header -->
@@ -418,24 +406,30 @@ $conn->close();
 
     <!-- Profile Picture Modal -->
     <div id="edit-picture-modal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
+        <div class="modal-content bg-white rounded-xl shadow-xl max-w-md mx-auto">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
                 <h2 class="text-xl font-bold text-gray-800">Update Profile Picture</h2>
-                <button id="close-modal" class="text-gray-500">
-                    <i class="uil uil-times text-xl"></i>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-            <form id="edit-picture-form" method="post" enctype="multipart/form-data" class="space-y-4">
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <i class="uil uil-image-upload text-4xl text-gray-400"></i>
-                    <p class="mt-2 text-sm text-gray-500">Click to upload or drag and drop</p>
+            <form id="edit-picture-form" method="post" enctype="multipart/form-data" class="space-y-6">
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer bg-gray-50 hover:bg-gray-100">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-sm text-gray-600 mb-2">Click to upload or drag and drop</p>
+                    <p class="text-xs text-gray-500">Supported formats: JPG, PNG, GIF</p>
                     <input type="file" id="profile_image" name="profile_image" accept="image/*" class="hidden">
                 </div>
-                <div class="flex justify-end space-x-3">
-                    <button type="button" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-all duration-300" onclick="closeModal()">
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" 
+                            class="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-300" 
+                            onclick="closeModal()">
+                        <i class="fas fa-times mr-2"></i>
                         Cancel
                     </button>
-                    <button type="submit" class="btn-primary px-4 py-2 rounded-lg transform hover:scale-[1.02] transition-all duration-300 shadow-sm">
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transform hover:scale-[1.02] transition-all duration-300 shadow-sm">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i>
                         Upload Picture
                     </button>
                 </div>

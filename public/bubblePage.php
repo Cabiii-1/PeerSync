@@ -210,11 +210,13 @@ $notebook_stmt->close();
                         <i class="fas fa-book mr-2"></i> Notebook
                     </a>
                 </li>
+                <?php if ($bubble['creator_id'] == $user_id): ?>
                     <li>
                         <a href="#" class="block p-2 rounded hover:bg-sky-200 transition duration-300" onclick="showContent('settings')">
                             <i class="fas fa-gear mr-2"></i> Settings
                         </a>
                     </li>
+                <?php endif; ?>
             </ul>
             <div class="flex items-center justify-between cursor-pointer mt-6" onclick="toggleMemberList()">
                 <h3 class="font-semibold">Bubble Members</h3>
