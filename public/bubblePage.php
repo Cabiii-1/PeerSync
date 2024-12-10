@@ -86,6 +86,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_message_id'])) {
     exit();
 }
 
+// Handle leaving bubble
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'leave_bubble') {
+    $bubble_id = $_POST['bubble_id'];
+
+    // Prepare the SQL statement to delete the user from the bubble
+    $query = "DELETE FROM user_bubble WHERE user_id = ? AND bubble_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ii", $user_id, $bubble_id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => $stmt->error]);
+    }
+    $stmt->close();
+    exit();
+}
+
 // Fetch notebooks
 $notebook_query = "SELECT notebooks.*, users.username, users.profile_image 
                    FROM notebooks 
@@ -94,6 +112,8 @@ $notebook_stmt = $conn->prepare($notebook_query);
 $notebook_stmt->execute();
 $notebooks = $notebook_stmt->get_result();
 $notebook_stmt->close();
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -261,7 +281,7 @@ $notebook_stmt->close();
                             </button>
                             <div id="options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                                 <div class="py-1">
-                                    <a href="#" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                    <a href="#" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50" onclick="leaveBubble(<?php echo $bubble_id; ?>)">
                                         <i class="fas fa-sign-out-alt mr-3"></i>
                                         Leave Bubble
                                     </a>
@@ -588,8 +608,8 @@ $notebook_stmt->close();
             <div id="general" class="tab-content">
                 <div class="card bg-white p-4 rounded shadow">
                     <div class="card-header mb-4">
-                        <h2 class="card-title text-xl font-bold">General Settings</h2>
-                        <p class="card-description text-gray-500">Manage your bubble's general settings</p>
+                        <h2 class="text-xl font-bold">General Settings</h2>
+                        <p class="text-gray-500 mb-4">Manage your bubble's general settings</p>
                     </div>
                     <div class="card-content space-y-4">
                         <div class="space-y-2">
@@ -1301,6 +1321,33 @@ document.addEventListener('click', function(event) {
 document.getElementById('start-discussion-btn')?.addEventListener('click', function() {
         document.getElementById('new-post-btn').click();
     });
+
+    function leaveBubble(bubbleId) {
+    if (confirm('Are you sure you want to leave this bubble?')) {
+        fetch('bubblePage.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'leave_bubble',
+                bubble_id: bubbleId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Optionally, refresh the page or remove the bubble from the UI
+                location.reload();
+            } else {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            location.reload();
+        });
+    }
+}
 </script>
 
 <!-- Modals -->

@@ -434,9 +434,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search_term'])) {
         selector: '#noteContent, #noteDetailsContent',
         plugins: [
             'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
-            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save'
+            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword'
         ],
-        toolbar: 'save | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+        toolbar: 'save importword| undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
         height: 'calc(100vh - 200px)',
         autoresize_overflow_padding: 0,
         autoresize_bottom_margin: 0,

@@ -414,8 +414,10 @@ $conn->close();
                         <div>
                             <label class="block text-gray-700 mb-2">Full Name</label>
                             <div class="flex space-x-2">
-                                <input type="text" id="full-name" value="<?php echo htmlspecialchars($userData['full_name']); ?>" 
-                                       class="flex-grow p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Enter your full name">
+                                <input type="text" id="full-name" 
+                                       value="<?php echo isset($userData['full_name']) ? htmlspecialchars($userData['full_name']) : ''; ?>" 
+                                       class="flex-grow p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                                       placeholder="Enter your full name">
                                 <button onclick="updateFullName()" 
                                         class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                                     Save
