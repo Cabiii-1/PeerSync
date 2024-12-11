@@ -141,7 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search_term'])) {
     $search_stmt->close();
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -214,7 +213,67 @@ body.tox-fullscreen .navbar {
 .tox-tinymce-aux {
     z-index: 999999 !important;
 }
+/* Update your drawing styles */
+.drawing-controls {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 999998;
+}
 
+.editor-canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 999997;
+    mix-blend-mode: multiply;
+}
+
+.drawing-mode .editor-canvas-overlay {
+    pointer-events: all;
+    cursor: crosshair;
+}
+
+.drawing-mode .tox-edit-area__iframe {
+    pointer-events: none;
+}
+
+/* Style for inserted drawings */
+img[data-drawing="true"] {
+    position: absolute !important;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    z-index: 100;
+    background: transparent;
+}
+
+.tox-edit-area__iframe {
+    position: relative;
+}
+
+.mce-content-body {
+    position: relative;
+}
+
+.drawing-button {
+    padding: 8px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.drawing-button:hover {
+    background: #e0e0e0;
+}
 </style>
 
 <body class="bg-gray-100">
@@ -473,35 +532,301 @@ body.tox-fullscreen .navbar {
     </div>
 
 <script>
-    // Initialize TinyMCE
-    tinymce.init({
-    selector: '#noteContent, #noteDetailsContent',
-    plugins: [
-        'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
-        'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword', 'fullscreen'
-    ],
-    toolbar: 'save importword| undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat fullscreen',
-    height: 'calc(100vh - 200px)',
-    fullscreen_native: false,
-    init_instance_callback: function(editor) {
-        editor.on('FullscreenStateChanged', function(e) {
-            if (e.state) {
-                // When entering fullscreen
-                document.body.classList.add('tox-fullscreen');
-                editor.getContainer().style.zIndex = '999999';
-            } else {
-                // When exiting fullscreen
-                document.body.classList.remove('tox-fullscreen');
+ tinymce.PluginManager.add('drawing', function(editor) {
+    let isDrawingMode = false;
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let canvas = null;
+    let ctx = null;
+    let drawingControls = null;
+    let undoStack = [];
+    let currentStep = null;
+
+    function createDrawingControls() {
+        const controls = document.createElement('div');
+        controls.className = 'drawing-controls';
+        controls.style.display = 'none';
+        controls.innerHTML = `
+            <input type="color" id="colorPicker" value="#000000" title="Color">
+            <input type="range" id="brushSize" min="1" max="50" value="5" title="Brush Size">
+            <button class="drawing-button" id="undoDrawing" title="Undo">Undo</button>
+            <button class="drawing-button" id="clearCanvas" title="Clear">Clear</button>
+            <button class="drawing-button" id="saveDrawing" title="Save">Save</button>
+            <button class="drawing-button" id="cancelDrawing" title="Cancel">Cancel</button>
+        `;
+        document.body.appendChild(controls);
+        return controls;
+    }
+
+    function saveDrawingState() {
+        if (canvas && ctx) {
+            // Create a deep copy of the current canvas state
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            undoStack.push(imageData);
+        }
+    }
+
+    function undoDrawing() {
+        if (undoStack.length > 1) { // Keep at least the initial blank state
+            undoStack.pop(); // Remove current state
+            const previousState = undoStack[undoStack.length - 1];
+            
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Restore the previous state
+            ctx.putImageData(previousState, 0, 0);
+        } else if (undoStack.length === 1) {
+            // If only initial state remains, clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    function startDrawing(e) {
+        if (!isDrawingMode) return;
+        isDrawing = true;
+        currentStep = [];
+        const rect = canvas.getBoundingClientRect();
+        lastX = e.clientX - rect.left;
+        lastY = e.clientY - rect.top;
+        currentStep.push({ x: lastX, y: lastY });
+    }
+
+    function draw(e) {
+        if (!isDrawing || !isDrawingMode) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = document.getElementById('colorPicker').value;
+        ctx.lineWidth = document.getElementById('brushSize').value;
+        ctx.stroke();
+
+        currentStep.push({ x, y });
+        lastX = x;
+        lastY = y;
+    }
+
+    function stopDrawing() {
+        if (isDrawing) {
+            isDrawing = false;
+            if (currentStep && currentStep.length > 1) {
+                saveDrawingState();
+            }
+            currentStep = null;
+        }
+    }
+
+    function toggleDrawingMode() {
+        isDrawingMode = !isDrawingMode;
+        
+        if (isDrawingMode) {
+            setupCanvas();
+            drawingControls.style.display = 'flex';
+            editor.getContainer().classList.add('drawing-mode');
+        } else {
+            if (canvas) {
+                canvas.remove();
+                canvas = null;
+            }
+            drawingControls.style.display = 'none';
+            editor.getContainer().classList.remove('drawing-mode');
+            undoStack = [];
+        }
+    }
+
+    function saveDrawing() {
+        if (canvas && ctx) {
+            // Create a temporary canvas for the drawing
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Set background to transparent
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            // Copy the current drawing
+            tempCtx.drawImage(canvas, 0, 0);
+
+            // Convert to PNG with transparency
+            const imageData = tempCanvas.toDataURL('image/png');
+            
+            // Insert the image with specific styling for overlay
+            editor.insertContent(`<img src="${imageData}" alt="Drawing" style="position: relative; z-index: 1; pointer-events: none; background: transparent;" data-drawing="true">`);
+            editor.undoManager.add();
+            
+            toggleDrawingMode();
+        }
+    }
+
+    function setupCanvas() {
+        const editorIframe = editor.getContentAreaContainer().querySelector('iframe');
+        const editorRect = editorIframe.getBoundingClientRect();
+
+        canvas = document.createElement('canvas');
+        canvas.className = 'editor-canvas-overlay';
+        canvas.width = editorRect.width;
+        canvas.height = editorRect.height;
+        canvas.style.width = `${editorRect.width}px`;
+        canvas.style.height = `${editorRect.height}px`;
+        canvas.style.position = 'absolute';
+        canvas.style.left = `${editorRect.left}px`;
+        canvas.style.top = `${editorRect.top}px`;
+
+        document.body.appendChild(canvas);
+        ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Save initial blank state
+        saveDrawingState();
+
+        // Add keyboard shortcut listener
+        document.addEventListener('keydown', function(e) {
+            if (isDrawingMode && (e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undoDrawing();
             }
         });
-    },
-    setup: function(editor) {
-        editor.on('init', function() {
-            editor.getContainer().style.position = 'relative';
-            editor.getContainer().style.zIndex = '1';
-        });
     }
+
+    function initialize() {
+        drawingControls = createDrawingControls();
+
+        document.getElementById('clearCanvas').addEventListener('click', () => {
+            if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                saveDrawingState();
+            }
+        });
+
+        document.getElementById('undoDrawing').addEventListener('click', undoDrawing);
+
+        document.getElementById('saveDrawing').addEventListener('click', saveDrawing);
+
+        document.getElementById('cancelDrawing').addEventListener('click', () => {
+            toggleDrawingMode();
+        });
+
+        document.addEventListener('mousedown', startDrawing);
+        document.addEventListener('mousemove', draw);
+        document.addEventListener('mouseup', stopDrawing);
+        document.addEventListener('mouseleave', stopDrawing);
+    }
+
+    editor.ui.registry.addToggleButton('drawing', {
+        icon: 'edit-block',
+        tooltip: 'Toggle Drawing Mode',
+        onAction: toggleDrawingMode,
+        onSetup: function(api) {
+            initialize();
+            return function() {};
+        }
+    });
 });
+    // Initialize TinyMCE
+    tinymce.init({
+        selector: '#noteContent, #noteDetailsContent',
+        plugins: [
+            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
+            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword', 
+            'fullscreen', 'tinycomments', 'drawing'
+        ],
+        toolbar: 'save importword| drawing | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat fullscreen addcomment showcomments',
+        tinycomments_mode: 'embedded',
+        tinycomments_author: 'embedded_journalist',
+        height: 'calc(100vh - 200px)',
+        fullscreen_native: false,
+        content_style: `
+            body { position: relative; }
+            img[data-drawing="true"] { 
+                position: absolute !important;
+                pointer-events: none;
+                mix-blend-mode: multiply;
+                z-index: 100;
+                background: transparent;
+            }
+        `,
+        init_instance_callback: function(editor) {
+            editor.on('FullscreenStateChanged', function(e) {
+                if (e.state) {
+                    document.body.classList.add('tox-fullscreen');
+                    editor.getContainer().style.zIndex = '999999';
+                } else {
+                    document.body.classList.remove('tox-fullscreen');
+                }
+            });
+        },
+        setup: function(editor) {
+            editor.on('init', function() {
+                editor.getContainer().style.position = 'relative';
+                editor.getContainer().style.zIndex = '1';
+            });
+
+            // Handle drawing overlays
+            editor.on('BeforeSetContent', function(e) {
+                if (e.content.indexOf('data-drawing="true"') !== -1) {
+                    // Ensure drawings maintain their overlay position
+                    e.content = e.content.replace(/(<img[^>]+data-drawing="true"[^>]+>)/g, 
+                        '<div style="position:relative;min-height:20px">$1</div>');
+                }
+            });
+        }
+    });
+    // Initialize TinyMCE
+    tinymce.init({
+        selector: '#noteContent, #noteDetailsContent',
+        plugins: [
+            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
+            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword', 
+            'fullscreen', 'tinycomments', 'drawing'
+        ],
+        toolbar: 'save importword| drawing | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat fullscreen addcomment showcomments',
+        tinycomments_mode: 'embedded',
+        tinycomments_author: 'embedded_journalist',
+        height: 'calc(100vh - 200px)',
+        fullscreen_native: false,
+        content_style: `
+            body { position: relative; }
+            img[data-drawing="true"] { 
+                position: absolute !important;
+                pointer-events: none;
+                mix-blend-mode: multiply;
+                z-index: 100;
+                background: transparent;
+            }
+        `,
+        init_instance_callback: function(editor) {
+            editor.on('FullscreenStateChanged', function(e) {
+                if (e.state) {
+                    document.body.classList.add('tox-fullscreen');
+                    editor.getContainer().style.zIndex = '999999';
+                } else {
+                    document.body.classList.remove('tox-fullscreen');
+                }
+            });
+        },
+        setup: function(editor) {
+            editor.on('init', function() {
+                editor.getContainer().style.position = 'relative';
+                editor.getContainer().style.zIndex = '1';
+            });
+
+            // Handle drawing overlays
+            editor.on('BeforeSetContent', function(e) {
+                if (e.content.indexOf('data-drawing="true"') !== -1) {
+                    // Ensure drawings maintain their overlay position
+                    e.content = e.content.replace(/(<img[^>]+data-drawing="true"[^>]+>)/g, 
+                        '<div style="position:relative;min-height:20px">$1</div>');
+                }
+            });
+        }
+    });
 
     let currentNoteId = null;
 
@@ -646,6 +971,7 @@ document.getElementById('searchNotes').addEventListener('input', searchNotes);
         }
 
         document.addEventListener("DOMContentLoaded", fetchJoinedBubbles);
+        
     </script>
 </body>
 </html>
