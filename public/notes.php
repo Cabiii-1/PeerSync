@@ -547,6 +547,7 @@ img[data-drawing="true"]:hover {
     let drawingControls = null;
     let undoStack = [];
     let currentStep = null;
+    let drawingOffset = { x: 0, y: 0 };
 
     function createDrawingControls() {
         const controls = document.createElement('div');
@@ -555,51 +556,73 @@ img[data-drawing="true"]:hover {
         controls.innerHTML = `
             <input type="color" id="colorPicker" value="#000000" title="Color">
             <input type="range" id="brushSize" min="1" max="50" value="5" title="Brush Size">
-            <button class="drawing-button" id="undoDrawing" title="Undo">Undo</button>
-            <button class="drawing-button" id="clearCanvas" title="Clear">Clear</button>
-            <button class="drawing-button" id="saveDrawing" title="Save">Save</button>
-            <button class="drawing-button" id="cancelDrawing" title="Cancel">Cancel</button>
+            <button class="drawing-button" id="undoDrawing" title="Undo">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button class="drawing-button" id="clearCanvas" title="Clear">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+            <button class="drawing-button" id="saveDrawing" title="Save">
+                <i class="fas fa-save"></i>
+            </button>
+            <button class="drawing-button" id="cancelDrawing" title="Cancel">
+                <i class="fas fa-times"></i>
+            </button>
         `;
         document.body.appendChild(controls);
         return controls;
     }
 
+    function updateDrawingPosition() {
+        if (!canvas) return;
+        const editorIframe = editor.getContentAreaContainer().querySelector('iframe');
+        const editorRect = editorIframe.getBoundingClientRect();
+        const editorBody = editor.getBody();
+        const scrollTop = editorBody.scrollTop;
+        
+        drawingOffset = {
+            x: editorRect.left,
+            y: editorRect.top - scrollTop
+        };
+
+        canvas.style.left = `${editorRect.left}px`;
+        canvas.style.top = `${editorRect.top}px`;
+        canvas.style.width = `${editorRect.width}px`;
+        canvas.style.height = `${editorRect.height}px`;
+    }
+
     function saveDrawingState() {
         if (canvas && ctx) {
-            // Create a deep copy of the current canvas state
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             undoStack.push(imageData);
         }
     }
 
     function undoDrawing() {
-        if (undoStack.length > 1) { // Keep at least the initial blank state
-            undoStack.pop(); // Remove current state
+        if (undoStack.length > 1) {
+            undoStack.pop();
             const previousState = undoStack[undoStack.length - 1];
-            
-            // Clear the canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Restore the previous state
             ctx.putImageData(previousState, 0, 0);
         } else if (undoStack.length === 1) {
-            // If only initial state remains, clear the canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
     }
 
     function startDrawing(e) {
-        if (!isDrawingMode) return;
+        if (!isDrawingMode || !canvas) return;
         isDrawing = true;
         currentStep = [];
         const rect = canvas.getBoundingClientRect();
         lastX = e.clientX - rect.left;
         lastY = e.clientY - rect.top;
         currentStep.push({ x: lastX, y: lastY });
+        e.preventDefault();
     }
 
     function draw(e) {
-        if (!isDrawing || !isDrawingMode) return;
+        if (!isDrawing || !isDrawingMode || !canvas) return;
+        e.preventDefault();
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -609,6 +632,8 @@ img[data-drawing="true"]:hover {
         ctx.lineTo(x, y);
         ctx.strokeStyle = document.getElementById('colorPicker').value;
         ctx.lineWidth = document.getElementById('brushSize').value;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.stroke();
 
         currentStep.push({ x, y });
@@ -645,28 +670,32 @@ img[data-drawing="true"]:hover {
     }
 
     function saveDrawing() {
-        if (canvas && ctx) {
-            // Create a temporary canvas for the drawing
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
+        if (!canvas || !ctx) return;
 
-            // Set background to transparent
-            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(canvas, 0, 0);
 
-            // Copy the current drawing
-            tempCtx.drawImage(canvas, 0, 0);
-
-            // Convert to PNG with transparency
-            const imageData = tempCanvas.toDataURL('image/png');
-            
-            // Insert the image with specific styling for overlay
-            editor.insertContent(`<img src="${imageData}" alt="Drawing" style="position: relative; z-index: 1; pointer-events: all; background: transparent;" data-drawing="true">`);
-            editor.undoManager.add();
-            
-            toggleDrawingMode();
-        }
+        const imageData = tempCanvas.toDataURL('image/png');
+        const timestamp = new Date().getTime();
+        const drawingId = `drawing-${timestamp}`;
+        
+        editor.insertContent(`
+            <img 
+                src="${imageData}" 
+                alt="Drawing" 
+                id="${drawingId}"
+                data-drawing="true"
+                data-timestamp="${timestamp}"
+                style="position: relative; z-index: 1; pointer-events: all; background: transparent;"
+            >
+        `);
+        
+        editor.undoManager.add();
+        toggleDrawingMode();
     }
 
     function setupCanvas() {
@@ -677,27 +706,19 @@ img[data-drawing="true"]:hover {
         canvas.className = 'editor-canvas-overlay';
         canvas.width = editorRect.width;
         canvas.height = editorRect.height;
-        canvas.style.width = `${editorRect.width}px`;
-        canvas.style.height = `${editorRect.height}px`;
-        canvas.style.position = 'absolute';
-        canvas.style.left = `${editorRect.left}px`;
-        canvas.style.top = `${editorRect.top}px`;
 
+        updateDrawingPosition();
         document.body.appendChild(canvas);
+        
         ctx = canvas.getContext('2d');
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Save initial blank state
         saveDrawingState();
 
-        // Add keyboard shortcut listener
-        document.addEventListener('keydown', function(e) {
-            if (isDrawingMode && (e.ctrlKey || e.metaKey) && e.key === 'z') {
-                e.preventDefault();
-                undoDrawing();
-            }
-        });
+        // Add scroll listener to update canvas position
+        editor.getDoc().addEventListener('scroll', updateDrawingPosition);
+        window.addEventListener('resize', updateDrawingPosition);
     }
 
     function initialize() {
@@ -711,17 +732,26 @@ img[data-drawing="true"]:hover {
         });
 
         document.getElementById('undoDrawing').addEventListener('click', undoDrawing);
-
         document.getElementById('saveDrawing').addEventListener('click', saveDrawing);
-
-        document.getElementById('cancelDrawing').addEventListener('click', () => {
-            toggleDrawingMode();
-        });
+        document.getElementById('cancelDrawing').addEventListener('click', toggleDrawingMode);
 
         document.addEventListener('mousedown', startDrawing);
         document.addEventListener('mousemove', draw);
         document.addEventListener('mouseup', stopDrawing);
         document.addEventListener('mouseleave', stopDrawing);
+
+        // Add keyboard shortcuts
+        editor.on('keydown', function(e) {
+            if (isDrawingMode) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    undoDrawing();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    toggleDrawingMode();
+                }
+            }
+        });
     }
 
     editor.ui.registry.addToggleButton('drawing', {
@@ -734,77 +764,16 @@ img[data-drawing="true"]:hover {
         }
     });
 });
+
     // Initialize TinyMCE
     tinymce.init({
         selector: '#noteContent, #noteDetailsContent',
         plugins: [
             'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
             'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword', 
-            'fullscreen', 'tinycomments', 'drawing'
+            'fullscreen', 'tinycomments', 'drawing', 'exportword', 'exportpdf'
         ],
-        toolbar: 'save importword| drawing | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat fullscreen addcomment showcomments',
-        tinycomments_mode: 'embedded',
-        tinycomments_author: 'embedded_journalist',
-        height: 'calc(100vh - 200px)',
-        fullscreen_native: false,
-        content_style: `
-            body { position: relative; }
-            img[data-drawing="true"] { 
-                position: absolute !important;
-                pointer-events: all !important;
-                mix-blend-mode: multiply;
-                z-index: 100;
-                background: transparent;
-                cursor: pointer;
-            }
-            img[data-drawing="true"]:hover {
-                outline: 2px solid #007bff;
-            }
-        `,
-        init_instance_callback: function(editor) {
-            editor.on('FullscreenStateChanged', function(e) {
-                if (e.state) {
-                    document.body.classList.add('tox-fullscreen');
-                    editor.getContainer().style.zIndex = '999999';
-                } else {
-                    document.body.classList.remove('tox-fullscreen');
-                }
-            });
-        },
-        setup: function(editor) {
-            editor.on('init', function() {
-                editor.getContainer().style.position = 'relative';
-                editor.getContainer().style.zIndex = '1';
-
-                // Add click handler for saved drawings
-                editor.getBody().addEventListener('click', function(e) {
-                    if (e.target.matches('img[data-drawing="true"]')) {
-                        if (confirm('Do you want to delete this drawing?')) {
-                            e.target.remove();
-                            editor.undoManager.add();
-                        }
-                    }
-                });
-            });
-
-            // Handle drawing overlays
-            editor.on('BeforeSetContent', function(e) {
-                if (e.content.indexOf('data-drawing="true"') !== -1) {
-                    // Keep the original image attributes but make it interactive
-                    e.content = e.content.replace(/(<img[^>]+data-drawing="true"[^>]+>)/g, '$1');
-                }
-            });
-        }
-    });
-    // Initialize TinyMCE
-    tinymce.init({
-        selector: '#noteContent, #noteDetailsContent',
-        plugins: [
-            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
-            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword', 
-            'fullscreen', 'tinycomments', 'drawing'
-        ],
-        toolbar: 'save importword| drawing | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat fullscreen addcomment showcomments',
+        toolbar: 'save importword exportword| drawing | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat fullscreen addcomment showcomments',
         tinycomments_mode: 'embedded',
         tinycomments_author: 'embedded_journalist',
         height: 'calc(100vh - 200px)',
