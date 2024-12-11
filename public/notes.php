@@ -156,10 +156,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search_term'])) {
 
 <style>
         .dropdown:hover .dropdown-menu { display: block; }
-        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.4); }
+        .modal { display: none; position: fixed; z-index: 5000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.4); }
         .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
-        .sidebar { width: 80px; transition: width 0.3s; position: fixed; top: 0; left: 0; height: 100%; overflow: visible; }
-        .navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; }
+        .sidebar { 
+    width: 80px; 
+    transition: width 0.3s; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    height: 100%; 
+    overflow: visible;
+    z-index: 30; /* Lower than fullscreen */
+}        
+/* Update existing styles */
+.navbar { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    z-index: 100;
+}
     .main-content {
         margin-top: 72px; 
         margin-left: 64px; 
@@ -170,6 +186,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search_term'])) {
         overflow: hidden;
     }
 .dropdown-menu {z-index: 50; /* Ensure this value is higher than other elements */}
+/* Ensure TinyMCE fullscreen mode and its components have highest z-index */
+/* Hide navbar when editor is fullscreen */
+body.tox-fullscreen .navbar {
+    display: none !important;
+}
+
+/* TinyMCE fullscreen styles */
+.tox.tox-tinymce.tox-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 999999 !important;
+}
+
+.tox-fullscreen-wrap {
+    z-index: 999999 !important;
+}
+
+.tox-editor-header {
+    z-index: 999999 !important;
+}
+
+/* Additional styles to ensure proper stacking */
+.tox-tinymce-aux {
+    z-index: 999999 !important;
+}
 
 </style>
 
@@ -431,33 +475,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['search_term'])) {
 <script>
     // Initialize TinyMCE
     tinymce.init({
-        selector: '#noteContent, #noteDetailsContent',
-        plugins: [
-            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
-            'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword'
-        ],
-        toolbar: 'save importword| undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
-        height: 'calc(100vh - 200px)',
-        autoresize_overflow_padding: 0,
-        autoresize_bottom_margin: 0,
-        resize: true,
-        overflow_y: 'auto',
-        menubar: true,
-        branding: false,
-        save_enablewhendirty: false,
-        save_onsavecallback: function() {
-            saveNoteChanges(new Event('save'));
-            return false;
-        },
-        setup: function(editor) {
-            editor.on('init', function() {
-                // This ensures TinyMCE is fully loaded before we try to set content
-                if (typeof initialNoteContent !== 'undefined') {
-                    editor.setContent(initialNoteContent);
-                }
-            });
-        }
-    });
+    selector: '#noteContent, #noteDetailsContent',
+    plugins: [
+        'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 
+        'media', 'searchreplace', 'table', 'visualblocks', 'wordcount', 'save', 'importword', 'fullscreen'
+    ],
+    toolbar: 'save importword| undo redo | blocks fontfamily fontsize | bold italic underline strikethrough backcolor forecolor | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat fullscreen',
+    height: 'calc(100vh - 200px)',
+    fullscreen_native: false,
+    init_instance_callback: function(editor) {
+        editor.on('FullscreenStateChanged', function(e) {
+            if (e.state) {
+                // When entering fullscreen
+                document.body.classList.add('tox-fullscreen');
+                editor.getContainer().style.zIndex = '999999';
+            } else {
+                // When exiting fullscreen
+                document.body.classList.remove('tox-fullscreen');
+            }
+        });
+    },
+    setup: function(editor) {
+        editor.on('init', function() {
+            editor.getContainer().style.position = 'relative';
+            editor.getContainer().style.zIndex = '1';
+        });
+    }
+});
 
     let currentNoteId = null;
 
