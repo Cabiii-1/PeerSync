@@ -249,10 +249,15 @@ body.tox-fullscreen .navbar {
 /* Style for inserted drawings */
 img[data-drawing="true"] {
     position: absolute !important;
-    pointer-events: none;
+    pointer-events: all !important;
     mix-blend-mode: multiply;
     z-index: 100;
     background: transparent;
+    cursor: pointer;
+}
+
+img[data-drawing="true"]:hover {
+    outline: 2px solid #007bff;
 }
 
 .tox-edit-area__iframe {
@@ -657,7 +662,7 @@ img[data-drawing="true"] {
             const imageData = tempCanvas.toDataURL('image/png');
             
             // Insert the image with specific styling for overlay
-            editor.insertContent(`<img src="${imageData}" alt="Drawing" style="position: relative; z-index: 1; pointer-events: none; background: transparent;" data-drawing="true">`);
+            editor.insertContent(`<img src="${imageData}" alt="Drawing" style="position: relative; z-index: 1; pointer-events: all; background: transparent;" data-drawing="true">`);
             editor.undoManager.add();
             
             toggleDrawingMode();
@@ -746,10 +751,14 @@ img[data-drawing="true"] {
             body { position: relative; }
             img[data-drawing="true"] { 
                 position: absolute !important;
-                pointer-events: none;
+                pointer-events: all !important;
                 mix-blend-mode: multiply;
                 z-index: 100;
                 background: transparent;
+                cursor: pointer;
+            }
+            img[data-drawing="true"]:hover {
+                outline: 2px solid #007bff;
             }
         `,
         init_instance_callback: function(editor) {
@@ -766,14 +775,23 @@ img[data-drawing="true"] {
             editor.on('init', function() {
                 editor.getContainer().style.position = 'relative';
                 editor.getContainer().style.zIndex = '1';
+
+                // Add click handler for saved drawings
+                editor.getBody().addEventListener('click', function(e) {
+                    if (e.target.matches('img[data-drawing="true"]')) {
+                        if (confirm('Do you want to delete this drawing?')) {
+                            e.target.remove();
+                            editor.undoManager.add();
+                        }
+                    }
+                });
             });
 
             // Handle drawing overlays
             editor.on('BeforeSetContent', function(e) {
                 if (e.content.indexOf('data-drawing="true"') !== -1) {
-                    // Ensure drawings maintain their overlay position
-                    e.content = e.content.replace(/(<img[^>]+data-drawing="true"[^>]+>)/g, 
-                        '<div style="position:relative;min-height:20px">$1</div>');
+                    // Keep the original image attributes but make it interactive
+                    e.content = e.content.replace(/(<img[^>]+data-drawing="true"[^>]+>)/g, '$1');
                 }
             });
         }
@@ -795,10 +813,14 @@ img[data-drawing="true"] {
             body { position: relative; }
             img[data-drawing="true"] { 
                 position: absolute !important;
-                pointer-events: none;
+                pointer-events: all !important;
                 mix-blend-mode: multiply;
                 z-index: 100;
                 background: transparent;
+                cursor: pointer;
+            }
+            img[data-drawing="true"]:hover {
+                outline: 2px solid #007bff;
             }
         `,
         init_instance_callback: function(editor) {
@@ -815,14 +837,23 @@ img[data-drawing="true"] {
             editor.on('init', function() {
                 editor.getContainer().style.position = 'relative';
                 editor.getContainer().style.zIndex = '1';
+
+                // Add click handler for saved drawings
+                editor.getBody().addEventListener('click', function(e) {
+                    if (e.target.matches('img[data-drawing="true"]')) {
+                        if (confirm('Do you want to delete this drawing?')) {
+                            e.target.remove();
+                            editor.undoManager.add();
+                        }
+                    }
+                });
             });
 
             // Handle drawing overlays
             editor.on('BeforeSetContent', function(e) {
                 if (e.content.indexOf('data-drawing="true"') !== -1) {
-                    // Ensure drawings maintain their overlay position
-                    e.content = e.content.replace(/(<img[^>]+data-drawing="true"[^>]+>)/g, 
-                        '<div style="position:relative;min-height:20px">$1</div>');
+                    // Keep the original image attributes but make it interactive
+                    e.content = e.content.replace(/(<img[^>]+data-drawing="true"[^>]+>)/g, '$1');
                 }
             });
         }
