@@ -24,19 +24,38 @@ if (!isset($_SESSION['access_token'])) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
         $response = curl_exec($ch);
+        $curl_error = curl_error($ch);
         curl_close($ch);
+
+        if ($curl_error) {
+            echo "CURL Error during token exchange: " . $curl_error . "<br>";
+            exit;
+        }
 
         $data = json_decode($response, true);
         if (isset($data['access_token'])) {
             $_SESSION['access_token'] = $data['access_token'];
+            echo "Successfully obtained access token<br>";
         } else {
-            die('Error getting access token: ' . print_r($data, true));
+            echo "Error getting access token. Response:<br>";
+            echo "<pre>" . print_r($data, true) . "</pre>";
+            exit;
         }
     } else {
-        // Redirect to the authorization URL
-        header("Location: https://accounts.google.com/o/oauth2/auth?client_id={$client_id}&redirect_uri={$redirect_uri}&scope={$scope}&response_type=code&access_type=offline");
+        // Redirect to the authorization URL with proper encoding
+        $auth_url = 'https://accounts.google.com/o/oauth2/auth?' . http_build_query([
+            'client_id' => $client_id,
+            'redirect_uri' => $redirect_uri,
+            'scope' => $scope,
+            'response_type' => 'code',
+            'access_type' => 'offline',
+            'prompt' => 'consent'
+        ]);
+        
+        header("Location: " . $auth_url);
         exit();
     }
 }

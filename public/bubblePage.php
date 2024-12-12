@@ -276,7 +276,7 @@ $notebook_stmt->close();
                             <i class="fas fa-search text-lg"></i>
                         </button>
                         <button onclick="openGMeetModal(event)" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200" title="Generate Google Meet Link">
-                            <i class="fas fa-video text-lg"> Generate Gmeet Link</i>
+                            <i class="fas fa-video text-lg"></i>
                         </button>
                         <div class="relative">
                             <button onclick="toggleOptionsMenu()" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200">
@@ -1356,7 +1356,7 @@ document.getElementById('start-discussion-btn')?.addEventListener('click', funct
 function openGMeetModal(event) {
     event.preventDefault();
     document.getElementById('gmeet-modal').classList.remove('hidden');
-    
+
     fetch('meetLink.php')
         .then(response => response.text())
         .then(data => {
@@ -1389,32 +1389,12 @@ function openGMeetModal(event) {
                         </div>
                     </div>
                 `;
-            } else {
-                meetContent.innerHTML = `
-                    <div class="bg-red-50 p-6 rounded-lg text-center">
-                        <i class="fas fa-exclamation-circle text-red-500 text-2xl mb-2"></i>
-                        <p class="text-red-800 font-semibold">Error Creating Meeting</p>
-                        <p class="text-red-600 mt-2">${data}</p>
-                        <button onclick="retryGMeet()" 
-                                class="mt-4 bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200">
-                            Try Again
-                        </button>
-                    </div>
-                `;
+            } else {               
+    window.open("http://localhost/PeerSync/public/meetLink.php", "_blank");
             }
         })
         .catch(error => {
-            document.getElementById('gmeet-content').innerHTML = `
-                <div class="bg-red-50 p-6 rounded-lg text-center">
-                    <i class="fas fa-exclamation-circle text-red-500 text-2xl mb-2"></i>
-                    <p class="text-red-800 font-semibold">Error Creating Meeting</p>
-                    <p class="text-red-600 mt-2">${error.message}</p>
-                    <button onclick="retryGMeet()" 
-                            class="mt-4 bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200">
-                        Try Again
-                    </button>
-                </div>
-            `;
+            window.open("http://localhost/PeerSync/public/meetLink.php", "_blank");
         });
 }
 
