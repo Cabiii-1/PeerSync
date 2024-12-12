@@ -275,6 +275,9 @@ $notebook_stmt->close();
                         <button class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200">
                             <i class="fas fa-search text-lg"></i>
                         </button>
+                        <button onclick="openGMeetModal(event)" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200" title="Generate Google Meet Link">
+                            <i class="fas fa-video text-lg"> Generate Gmeet Link</i>
+                        </button>
                         <div class="relative">
                             <button onclick="toggleOptionsMenu()" class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200">
                                 <i class="fas fa-ellipsis-v text-lg"></i>
@@ -1348,6 +1351,89 @@ document.getElementById('start-discussion-btn')?.addEventListener('click', funct
         });
     }
 }
+
+// Google Meet Modal Functions
+function openGMeetModal(event) {
+    event.preventDefault();
+    document.getElementById('gmeet-modal').classList.remove('hidden');
+    
+    fetch('meetLink.php')
+        .then(response => response.text())
+        .then(data => {
+            const meetContent = document.getElementById('gmeet-content');
+            if (data.includes('Meeting created:')) {
+                const link = data.match(/<a href="([^"]+)"/)[1];
+                meetContent.innerHTML = `
+                    <div class="text-center">
+                        <div class="bg-green-50 p-4 rounded-lg mb-6">
+                            <i class="fas fa-check-circle text-green-500 text-2xl mb-2"></i>
+                            <p class="text-green-800 font-semibold">Meeting Successfully Created!</p>
+                        </div>
+                        <div class="mb-6">
+                            <p class="text-gray-600 mb-2">Your meeting link is ready:</p>
+                            <a href="${link}" target="_blank" 
+                               class="block w-full p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors duration-200 mb-4 break-all">
+                                ${link}
+                            </a>
+                        </div>
+                        <div class="flex justify-center space-x-4">
+                            <a href="${link}" target="_blank" 
+                               class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center">
+                                <i class="fas fa-video mr-2"></i>
+                                Join Meeting
+                            </a>
+                            <button onclick="closeGMeetModal()" 
+                                    class="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors duration-200">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                meetContent.innerHTML = `
+                    <div class="bg-red-50 p-6 rounded-lg text-center">
+                        <i class="fas fa-exclamation-circle text-red-500 text-2xl mb-2"></i>
+                        <p class="text-red-800 font-semibold">Error Creating Meeting</p>
+                        <p class="text-red-600 mt-2">${data}</p>
+                        <button onclick="retryGMeet()" 
+                                class="mt-4 bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('gmeet-content').innerHTML = `
+                <div class="bg-red-50 p-6 rounded-lg text-center">
+                    <i class="fas fa-exclamation-circle text-red-500 text-2xl mb-2"></i>
+                    <p class="text-red-800 font-semibold">Error Creating Meeting</p>
+                    <p class="text-red-600 mt-2">${error.message}</p>
+                    <button onclick="retryGMeet()" 
+                            class="mt-4 bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200">
+                        Try Again
+                    </button>
+                </div>
+            `;
+        });
+}
+
+function closeGMeetModal() {
+    document.getElementById('gmeet-modal').classList.add('hidden');
+}
+
+function retryGMeet() {
+    const event = { preventDefault: () => {} };
+    openGMeetModal(event);
+}
+
+// Close modal when clicking outside
+document.getElementById('gmeet-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeGMeetModal();
+    }
+});
+
 </script>
 
 <!-- Modals -->
@@ -1434,6 +1520,24 @@ document.getElementById('start-discussion-btn')?.addEventListener('click', funct
                 </button>
             </div>
         </form>
+    </div>
+</div>
+<!-- Google Meet Modal -->
+<div id="gmeet-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+    <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8 m-4 relative">
+        <button onclick="closeGMeetModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        <div id="gmeet-content" class="mt-2">
+            <div class="text-center">
+                <i class="fas fa-video text-4xl text-blue-500 mb-4"></i>
+                <h3 class="text-xl font-semibold mb-2">Creating Google Meet...</h3>
+                <p class="text-gray-600">Please wait while we set up your meeting.</p>
+                <div class="mt-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 </body>
