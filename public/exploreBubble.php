@@ -266,7 +266,7 @@ $conn->close();
           if ($available_bubbles_result && $available_bubbles_result->num_rows > 0):
             while ($bubble = $available_bubbles_result->fetch_assoc()): 
           ?>
-            <div class="bubble-card relative bg-gray-200 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:-translate-y-1 flex flex-col justify-between h-80 w-full p-4">
+            <div class="bubble-card relative bg-gray-200 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:-translate-y-1 flex flex-col justify-between h-80 w-full p-4 available-bubble" data-bubble-id="<?php echo $bubble['id']; ?>" data-bubble-name="<?php echo htmlspecialchars($bubble['bubble_name']); ?>" data-profile-image="data:image/jpeg;base64,<?php echo base64_encode($bubble['profile_image']); ?>" data-description="<?php echo htmlspecialchars($bubble['description']); ?>" data-creator="<?php echo htmlspecialchars($bubble['creator']); ?>" data-member-count="<?php echo $bubble['member_count']; ?>">
               <div class="flex-grow">
                 <img src="data:image/jpeg;base64,<?php echo base64_encode($bubble['profile_image']); ?>" alt="<?php echo htmlspecialchars($bubble['bubble_name']); ?>" class="w-full h-40 object-cover mb-4">
                 <div class="text-lg font-bold mb-2 truncate" title="<?php echo htmlspecialchars($bubble['bubble_name']); ?>">
@@ -380,50 +380,46 @@ $conn->close();
         </div>
     </div>
 
-    <style>
-        #toast-success {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: white;
-            padding: 16px 24px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        #toast-success.show {
-            opacity: 1;
-        }
-
-        .toast-icon {
-            width: 20px;
-            height: 20px;
-            background-color: #4CAF50;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .toast-icon::before {
-            content: "✓";
-            color: white;
-            font-size: 14px;
-        }
-
-        .toast-message {
-            font-size: 14px;
-            font-weight: 500;
-        }
-    </style>
+    <!-- Modal for Bubble Details -->
+    <div id="bubble-details-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b">
+                <h2 class="text-3xl font-bold text-gray-800" id="modal-bubble-name"></h2>
+                <span id="closeBubbleDetailsModal" class="cursor-pointer text-gray-500 hover:text-red-500 text-2xl transition-colors">&times;</span>
+            </div>
+            <div class="flex items-start space-x-8 mb-6">
+                <div class="flex flex-col space-y-3">
+                    <div class="bg-gray-50 p-2 rounded-lg shadow-sm">
+                        <img id="modal-bubble-image" src="" alt="Bubble Profile" class="w-60 h-48 rounded-lg object-cover">
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <p class="text-gray-700 text-center font-medium">
+                            <i class="fas fa-users mr-2 text-blue-500"></i>
+                            <span id="modal-bubble-members" class="text-lg"></span> Members
+                        </p>
+                    </div>
+                </div>
+                <div class="flex-1 space-y-6">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">About this Bubble</h3>
+                        <p id="modal-bubble-description" class="text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-lg"></p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-gray-700">
+                            <i class="fas fa-user-circle mr-2 text-blue-500"></i>
+                            Created by: <span id="modal-bubble-creator" class="font-medium"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end pt-4 border-t">
+                <button id="modal-join-button" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transform hover:scale-105 transition-all duration-200 font-medium flex items-center">
+                    <i class="fas fa-plus-circle mr-2"></i>
+                    Join Bubble
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast-success" class="hidden">
@@ -565,6 +561,83 @@ $conn->close();
                         }
                     });
                 }
+            });
+        }
+    </script>
+
+    <script>
+        // Function to show bubble details in modal
+        function showBubbleDetails(bubbleId, bubbleName, profileImage, description, creator, memberCount) {
+            const modal = document.getElementById('bubble-details-modal');
+            document.getElementById('modal-bubble-name').textContent = bubbleName;
+            document.getElementById('modal-bubble-image').src = profileImage || 'default-bubble-image.png';
+            document.getElementById('modal-bubble-creator').textContent = creator;
+            document.getElementById('modal-bubble-members').textContent = memberCount;
+            document.getElementById('modal-bubble-description').textContent = description;
+            
+            // Configure join button
+            const joinButton = document.getElementById('modal-join-button');
+            joinButton.onclick = () => joinBubble(bubbleId);
+            
+            modal.classList.remove('hidden');
+        }
+
+        // Close modal when clicking the close button
+        document.getElementById('closeBubbleDetailsModal').addEventListener('click', () => {
+            document.getElementById('bubble-details-modal').classList.add('hidden');
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('bubble-details-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('bubble-details-modal')) {
+                document.getElementById('bubble-details-modal').classList.add('hidden');
+            }
+        });
+
+        // Add click event listeners to available bubbles
+        document.querySelectorAll('.available-bubble').forEach(bubble => {
+            bubble.addEventListener('click', function() {
+                const bubbleId = this.dataset.bubbleId;
+                const bubbleName = this.dataset.bubbleName;
+                const profileImage = this.dataset.profileImage;
+                const description = this.dataset.description;
+                const creator = this.dataset.creator;
+                const memberCount = this.dataset.memberCount;
+                
+                showBubbleDetails(bubbleId, bubbleName, profileImage, description, creator, memberCount);
+            });
+        });
+
+        // Function to handle joining a bubble
+        function joinBubble(bubbleId) {
+            fetch('joinBubble.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'bubble_id=' + bubbleId
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close the modal
+                    document.getElementById('bubble-details-modal').classList.add('hidden');
+                    // Show success message
+                    const successMessage = document.getElementById('success-message');
+                    successMessage.querySelector('span').textContent = 'Successfully joined the bubble!';
+                    successMessage.classList.remove('hidden');
+                    setTimeout(() => {
+                        successMessage.classList.add('hidden');
+                        // Refresh the page to update the bubble lists
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    alert('Failed to join bubble: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while trying to join the bubble');
             });
         }
     </script>
