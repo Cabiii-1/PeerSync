@@ -12,5 +12,8 @@
   "description": "",
   "devDependencies": {
     "tailwindcss": "^3.4.14"
+  },
+  "dependencies": {
+    "vendor": "^1.7.0"
   }
 }
