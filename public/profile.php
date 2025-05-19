@@ -108,17 +108,26 @@ $stmt->close();
 
 // Fetch user's joined bubbles
 $bubbles_sql = "SELECT b.*, ub.joined_at,
-                (SELECT COUNT(*) FROM user_bubble WHERE bubble_id = b.id) as member_count 
+                (SELECT COUNT(*) FROM user_bubble WHERE bubble_id = b.id) as member_count,
+                CASE WHEN b.creator_id = ? THEN 'created' ELSE 'joined' END as bubble_type
                 FROM bubbles b 
                 JOIN user_bubble ub ON b.id = ub.bubble_id 
                 WHERE ub.user_id = ? 
                 ORDER BY ub.joined_at DESC";
 $bubbles_stmt = $conn->prepare($bubbles_sql);
-$bubbles_stmt->bind_param("i", $userId);
+$bubbles_stmt->bind_param("ii", $userId, $userId);
 $bubbles_stmt->execute();
 $bubbles_result = $bubbles_stmt->get_result();
 $userBubbles = $bubbles_result->fetch_all(MYSQLI_ASSOC);
 $bubbles_stmt->close();
+
+// Separate bubbles into created and joined
+$createdBubbles = array_filter($userBubbles, function($bubble) {
+    return $bubble['bubble_type'] === 'created';
+});
+$joinedBubbles = array_filter($userBubbles, function($bubble) {
+    return $bubble['bubble_type'] === 'joined';
+});
 
 // Fetch user's posts with bubble information
 $posts_sql = "SELECT bp.*, b.bubble_name 
@@ -243,7 +252,7 @@ $conn->close();
     <!-- Navbar -->
     <nav class="bg-secondary-100 text-white flex justify-between items-center fixed w-full top-0 z-50 px-4 py-2" style="background-color: rgb(43 84 126 / var(--tw-bg-opacity));">
         <div class="flex items-center">
-            <a href="indexTimeline.php"><img src="../public/ps.png" alt="Peerync Logo" class="h-12 w-12"></a>
+            <a href="Timeline/indexTimeline.php"><img src="../public/ps.png" alt="Peerync Logo" class="h-12 w-12"></a>
             <span class="text-2xl font-bold ml-2">PeerSync</span>
         </div>
         <div class="flex items-center space-x-4">
@@ -374,26 +383,105 @@ $conn->close();
             </div>
         </div>
 
-        <div class="tab-content hidden" id="bubbles-content">
-            <div class="grid md:grid-cols-2 gap-6" id="bubble-list">
-                <?php foreach ($userBubbles as $bubble): ?>
-                    <div class="profile-card p-6 hover:shadow-lg transition-all duration-300">
-                        <h3 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($bubble['bubble_name']); ?></h3>
-                        <p class="text-gray-600"><?php echo htmlspecialchars($bubble['description']); ?></p>
-                        <div class="flex justify-between items-center mt-4">
-                            <div class="text-sm text-gray-500">
-                                <i class="uil uil-users-alt mr-1"></i>
-                                <?php echo htmlspecialchars($bubble['member_count']); ?> members
-                            </div>
-                            <div class="text-sm text-gray-500">
-                                <i class="uil uil-clock mr-1"></i>
-                                <?php echo date('M j, Y', strtotime($bubble['joined_at'])); ?>
-                            </div>
-                        </div>
+        
+<div class="tab-content hidden" id="bubbles-content">
+    <!-- Add Bubble Button -->
+    <div class="flex justify-end mb-6">
+        <a href="exploreBubble.php" class="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors shadow-md">
+            <i class="uil uil-plus-circle mr-2"></i>
+            Add Bubbles
+        </a>
+    </div>
+
+    <!-- Bubbles Grid Container -->
+    <div class="grid md:grid-cols-2 gap-8">
+        <!-- Created Bubbles Section -->
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Bubbles You Created</h2>
+            <div class="space-y-6" id="created-bubble-list">
+                <?php if (empty($createdBubbles)): ?>
+                    <div class="profile-card p-8 text-center">
+                        <i class="uil uil-circle text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Bubbles Created Yet</h3>
+                        <p class="text-gray-500 mb-4">Create your first bubble to start connecting with others!</p>
+                        <a href="createbubble.php" class="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                            Create Bubble
+                        </a>
                     </div>
-                <?php endforeach; ?>
+                <?php else: ?>
+                    <?php foreach ($createdBubbles as $bubble): ?>
+                        <div class="profile-card p-6 hover:shadow-lg transition-all duration-300 relative group">
+                            <a href="bubblePage.php?bubble_id=<?php echo $bubble['id']; ?>" class="block">
+                                <div class="flex items-center mb-4">
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Created by you</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($bubble['bubble_name']); ?></h3>
+                                <p class="text-gray-600 mb-4"><?php echo htmlspecialchars($bubble['description']); ?></p>
+                                <div class="flex justify-between items-center">
+                                    <div class="text-sm text-gray-500">
+                                        <i class="uil uil-users-alt mr-1"></i>
+                                        <?php echo htmlspecialchars($bubble['member_count']); ?> members
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        <i class="uil uil-clock mr-1"></i>
+                                        <?php echo date('M j, Y', strtotime($bubble['created_at'])); ?>
+                                    </div>
+                                </div>
+                            </a>
+                            <!-- Add Delete Button Here -->
+                            <button onclick="deleteBubble(<?php echo $bubble['id']; ?>, this)" 
+                                    class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 z-10">
+                                Delete
+                            </button>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
+
+        <!-- Joined Bubbles Section -->
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Bubbles You Joined</h2>
+            <div class="space-y-6" id="joined-bubble-list">
+                <?php if (empty($joinedBubbles)): ?>
+                    <div class="profile-card p-8 text-center">
+                        <i class="uil uil-circle text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Bubbles Joined Yet</h3>
+                        <p class="text-gray-500 mb-4">Explore and join bubbles to connect with others!</p>
+                        <a href="exploreBubble.php" class="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                            Explore Bubbles
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($joinedBubbles as $bubble): ?>
+                        <div class="profile-card p-6 hover:shadow-lg transition-all duration-300 relative group">
+                            <a href="bubblePage.php?bubble_id=<?php echo $bubble['id']; ?>" class="block">
+                                <h3 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($bubble['bubble_name']); ?></h3>
+                                <p class="text-gray-600 mb-4"><?php echo htmlspecialchars($bubble['description']); ?></p>
+                                <div class="flex justify-between items-center">
+                                    <div class="text-sm text-gray-500">
+                                        <i class="uil uil-users-alt mr-1"></i>
+                                        <?php echo htmlspecialchars($bubble['member_count']); ?> members
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        <i class="uil uil-clock mr-1"></i>
+                                        <?php echo date('M j, Y', strtotime($bubble['joined_at'])); ?>
+                                    </div>
+                                </div>
+                            </a>
+                            
+                            <!-- Leave button (appears on hover) -->
+                            <button onclick="leaveBubble(event, <?php echo $bubble['id']; ?>)" 
+                                    class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600">
+                                Leave
+                            </button>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
 
         <div class="tab-content hidden" id="settings-content">
             <div class="profile-card p-6">
@@ -836,6 +924,94 @@ $conn->close();
                 }, 2000);
             }
         }
+
+// Function to handle leaving a bubble
+function leaveBubble(event, bubbleId) {
+    // Prevent the click from propagating to the parent (which would navigate to the bubble page)
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (confirm('Are you sure you want to leave this bubble?')) {
+        fetch('bubblePage.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'leave_bubble',
+                bubble_id: bubbleId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the bubble card from the UI
+                const bubbleCard = event.target.closest('.profile-card');
+                bubbleCard.remove();
+                
+                // If no bubbles left, show the empty state
+                const bubbleList = document.getElementById('bubble-list');
+                if (bubbleList.children.length === 0) {
+                    bubbleList.innerHTML = `
+                        <div class="col-span-2 profile-card p-8 text-center">
+                            <i class="uil uil-circle text-6xl text-gray-300 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-600 mb-2">No Bubbles Joined Yet</h3>
+                            <p class="text-gray-500 mb-4">Explore and join bubbles to connect with others!</p>
+                            <a href="exploreBubble.php" class="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                                Explore Bubbles
+                            </a>
+                        </div>
+                    `;
+                }
+                
+                // Update the bubble count in the stats
+                const bubbleCountElement = document.querySelector('.stat-card:first-child .text-3xl');
+                if (bubbleCountElement) {
+                    let count = parseInt(bubbleCountElement.textContent);
+                    bubbleCountElement.textContent = (count - 1).toString();
+                }
+            } else {
+                alert('Failed to leave bubble. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while trying to leave the bubble.');
+        });
+    }
+}
+
+// Function to handle deleting a bubble
+function deleteBubble(bubbleId, btn) {
+    if (confirm('Are you sure you want to delete this bubble? This action cannot be undone.')) {
+        fetch('delete_Bubble.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'bubble_id=' + encodeURIComponent(bubbleId)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the bubble card from the UI
+                const bubbleCard = btn.closest('.profile-card');
+                bubbleCard.remove();
+                // Optionally update the bubble count
+                const bubbleCountElement = document.querySelector('.stat-card:first-child .text-3xl');
+                if (bubbleCountElement) {
+                    let count = parseInt(bubbleCountElement.textContent);
+                    bubbleCountElement.textContent = (count - 1).toString();
+                }
+            } else {
+                alert(data.message || 'Failed to delete bubble.');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred while deleting the bubble.');
+        });
+    }
+}
     </script>
 </body>
 </html>

@@ -502,6 +502,25 @@ $stmt->close();
         </div>
     </div>
 
+    <!-- Bubble Created Modal -->
+<div class="modal fade" id="bubbleCreatedModal" tabindex="-1" aria-labelledby="bubbleCreatedModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bubbleCreatedModalLabel">Bubble Created</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        You have successfully created your bubble.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Confirm</button>
+        <button type="button" class="btn btn-primary" id="proceedToBubbleBtn">Proceed to Bubble</button>
+      </div>
+    </div>
+  </div>
+</div>
+
     <script>
         // Toggle dropdown menu
         document.getElementById('profileImage').addEventListener('click', function() {

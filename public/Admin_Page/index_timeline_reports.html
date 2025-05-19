@@ -164,7 +164,7 @@
                                     <a class="nav-link active" href="index_timeline_reports.html"><i class="mdi mdi-circle-medium"></i> Timeline Reports</a>
                                     <a class="nav-link" href="view_users.html"><i class="mdi mdi-circle-medium"></i> View Users</a>
                                     <a class="nav-link" href="View_Bubbles.html"><i class="mdi mdi-circle-medium"></i> Bubbles</a>
-                                    <a class="nav-link" href="admin_messages.html"><i class="mdi mdi-circle-medium"></i> Messages</a>
+                                    <!-- <a class="nav-link" href="admin_messages.html"><i class="mdi mdi-circle-medium"></i> Messages</a> -->
                                 </div>
                             </li>
                         </ul>
@@ -314,11 +314,8 @@
                     <td>${escapeHtml(report.report_status || '')}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn btn-outline-success btn-resolve" data-report-id="${escapeHtml(String(report.report_id))}" title="Resolve">
-                                Resolve
-                            </button>
-                            <button class="btn btn-outline-secondary btn-dismiss" data-report-id="${escapeHtml(String(report.report_id))}" title="Dismiss">
-                                Dismiss
+                            <button class="btn btn-outline-danger btn-suspend" data-user-id="${escapeHtml(String(report.post_owner_id))}" title="Suspend User">
+                                Suspend
                             </button>
                         </div>
                     </td>
@@ -326,78 +323,39 @@
                 tbody.appendChild(row);
             });
 
-            // Add event listeners for buttons
-            setupButtonEventListeners();
+            // Add event listeners for suspend buttons
+            setupSuspendButtonListeners();
         }
 
-        function setupButtonEventListeners() {
-            document.querySelectorAll('.btn-resolve').forEach(button => {
-                button.addEventListener('click', handleResolve);
-            });
-            document.querySelectorAll('.btn-dismiss').forEach(button => {
-                button.addEventListener('click', handleDismiss);
+        function setupSuspendButtonListeners() {
+            document.querySelectorAll('.btn-suspend').forEach(button => {
+                button.addEventListener('click', handleSuspend);
             });
         }
 
-        function handleResolve(event) {
-            const reportId = event.target.dataset.reportId;
-            if (confirm('Are you sure you want to resolve this report? This will:\n\n' +
-                       '1. Suspend the user account\n' +
-                       '2. Delete the reported post\n' +
-                       '3. Mark the report as resolved')) {
-                
-                fetch('resolve_report.php', {
+        function handleSuspend(event) {
+            const userId = event.target.dataset.userId;
+            if (confirm('Are you sure you want to suspend this user?')) {
+                fetch('suspend_user.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: `report_id=${reportId}`
+                    body: `user_id=${userId}`
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
                         throw new Error(data.error);
                     }
-                    // Refresh the reports list
+                    alert('User suspended successfully.');
                     fetchReports();
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    displayError(error.message || 'Failed to resolve report');
+                    displayError(error.message || 'Failed to suspend user');
                 });
             }
-        }
-
-        function handleDismiss(event) {
-            const reportId = event.target.dataset.reportId;
-            updateReportStatus(reportId, 'Dismissed')
-                .then(response => {
-                    if (response.redirect_url) {
-                        window.location.href = response.redirect_url;
-                    } else {
-                        fetchReports(); // Refresh the reports list if no redirect
-                    }
-                });
-        }
-
-        function updateReportStatus(reportId, status) {
-            return fetch('update_report_status.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `report_id=${reportId}&status=${status}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                return data;
-            })
-            .catch(error => {
-                displayError(error.message || 'Failed to update report status');
-            });
         }
 
         function fetchReports() {

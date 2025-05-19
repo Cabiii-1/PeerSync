@@ -1,5 +1,9 @@
 <?php
-// suspend_user.phpre// Include the database connection
+header('Content-Type: application/json');
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Include the database connection
 include 'config.php';
 
 // Get the posted data
@@ -30,8 +34,10 @@ if ($stmt) {
     $stmt->close();
 } else {
     echo json_encode(["success" => false, "message" => "Error preparing statement: " . $conn->error]);
-statement: " . $conn->error]);
 }
 
 $conn->close();
+
+echo json_encode(['success' => true]);
+exit;
 ?>

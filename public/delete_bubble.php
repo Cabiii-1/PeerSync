@@ -1,71 +1,38 @@
 <?php
 session_start();
-include 'config.php';
+require 'config.php';
 
 header('Content-Type: application/json');
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
 }
 
-// Get bubble ID from POST request
-$data = json_decode(file_get_contents('php://input'), true);
-$bubble_id = $data['bubble_id'] ?? null;
+$userId = $_SESSION['user_id'];
 
-if (!$bubble_id) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Bubble ID is required']);
+// Accept both JSON and form POST
+if ($_SERVER['CONTENT_TYPE'] === 'application/json') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $bubbleId = isset($data['bubble_id']) ? intval($data['bubble_id']) : 0;
+} else {
+    $bubbleId = isset($_POST['bubble_id']) ? intval($_POST['bubble_id']) : 0;
+}
+
+if (!$bubbleId) {
+    echo json_encode(['success' => false, 'message' => 'Bubble ID is required']);
     exit;
 }
 
-// Check if user has permission to delete the bubble (is owner)
-$check_owner = $conn->prepare("SELECT creator_id FROM bubbles WHERE id = ?");
-$check_owner->bind_param("i", $bubble_id);
-$check_owner->execute();
-$result = $check_owner->get_result();
-$bubble = $result->fetch_assoc();
-
-if (!$bubble || $bubble['creator_id'] != $_SESSION['user_id']) {
-    http_response_code(403);
-    echo json_encode(['error' => 'You do not have permission to delete this bubble']);
-    exit;
-}
-
-// Start transaction
-$conn->begin_transaction();
-
-try {
-    // Delete all messages
-    $delete_messages = $conn->prepare("DELETE FROM bubble_message WHERE bubble_id = ?");
-    $delete_messages->bind_param("i", $bubble_id);
-    $delete_messages->execute();
-
-    // Delete all posts
-    $delete_posts = $conn->prepare("DELETE FROM bubble_posts WHERE bubble_id = ?");
-    $delete_posts->bind_param("i", $bubble_id);
-    $delete_posts->execute();
-
-    // Delete all member associations
-    $delete_members = $conn->prepare("DELETE FROM user_bubble WHERE bubble_id = ?");
-    $delete_members->bind_param("i", $bubble_id);
-    $delete_members->execute();
-
-    // Finally, delete the bubble itself
-    $delete_bubble = $conn->prepare("DELETE FROM bubbles WHERE id = ?");
-    $delete_bubble->bind_param("i", $bubble_id);
-    $delete_bubble->execute();
-
-    // Commit transaction
-    $conn->commit();
-    
+// Only allow deletion if the user is the creator
+$stmt = $conn->prepare("DELETE FROM bubbles WHERE id = ? AND creator_id = ?");
+$stmt->bind_param("ii", $bubbleId, $userId);
+if ($stmt->execute() && $stmt->affected_rows > 0) {
     echo json_encode(['success' => true]);
-} catch (Exception $e) {
-    // Rollback on error
-    $conn->rollback();
-    http_response_code(500);
-    error_log('Failed to delete bubble: ' . $e->getMessage());
-    echo json_encode(['error' => 'Failed to delete bubble']);
+} else {
+    echo json_encode(['success' => false, 'message' => 'Delete failed or not authorized']);
 }
+$stmt->close();
+$conn->close();
+?>

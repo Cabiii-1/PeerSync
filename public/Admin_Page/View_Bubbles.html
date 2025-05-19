@@ -81,7 +81,7 @@
                                     <a class="nav-link" href="index_timeline_reports.html"><i class="mdi mdi-circle-medium"></i> Timeline Reports</a>
                                     <a class="nav-link" href="view_users.html"><i class="mdi mdi-circle-medium"></i> View Users</a>
                                     <a class="nav-link active" href="View_Bubbles.html"><i class="mdi mdi-circle-medium"></i> Bubbles</a>
-                                    <a class="nav-link" href="admin_messages.html"><i class="mdi mdi-circle-medium"></i> Messages</a>
+                                    <!-- <a class="nav-link" href="admin_messages.html"><i class="mdi mdi-circle-medium"></i> Messages</a> -->
                                 </div>
                             </li>
                         </ul>
@@ -272,6 +272,10 @@
 
             for (const bubble of pageData) {
                 const creatorUsername = await fetchUsername(bubble.creator_id);
+                // Assume bubble.profile_picture contains the image URL or path (adjust as needed)
+                const profilePic = bubble.profile_picture 
+                    ? `<img src="${escapeHtml(bubble.profile_picture)}" alt="Profile Picture" class="img-thumbnail mb-2" style="max-width:100px;max-height:100px;">`
+                    : `<div class="mb-2 text-muted" style="font-size:0.9em;">No Image</div>`;
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td class="truncate bubble-name" data-full-text="${bubble.bubble_name}">${bubble.bubble_name}</td>
@@ -279,7 +283,9 @@
                     <td class="truncate bubble-creator" data-full-text="${creatorUsername}">${creatorUsername}</td>
                     <td class="truncate bubble-date" data-full-text="${formatDate(bubble.created_at)}">${formatDate(bubble.created_at)}</td>
                     <td class="action-buttons">
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewBubble(${bubble.id})">
+                        <button class="btn btn-sm btn-outline-primary view-btn"
+                            data-profile-pic="${bubble.profile_picture ? escapeHtml(bubble.profile_picture) : ''}"
+                            data-description="${escapeHtml(bubble.description)}">
                             <i class="mdi mdi-eye"></i> View
                         </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteBubble(${bubble.id})">
@@ -293,6 +299,14 @@
             // Update pagination
             const totalPages = Math.ceil(bubbleData.length / itemsPerPage);
             updatePagination(totalPages);
+
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const profilePic = this.getAttribute('data-profile-pic');
+                    const description = this.getAttribute('data-description');
+                    viewBubbleModal(profilePic, description);
+                });
+            });
         }
 
         // Function to format date
@@ -455,6 +469,18 @@
                 fetchBubbles(); // Refresh immediately when page becomes visible
             }
         });
+
+        function escapeHtml(text) {
+            return text.replace(/[&<>"']/g, function(m) {
+                return ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                })[m];
+            });
+        }
     </script>
     <script>
         // Store the collapse state in localStorage
@@ -483,6 +509,36 @@
                 }
             });
         });
+    </script>
+
+    <!-- Add this modal HTML just before the closing </body> tag (replace the old modal if present) -->
+    <div class="modal fade" id="bubbleProfileModal" tabindex="-1" aria-labelledby="bubbleProfileModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="bubbleProfileModalLabel">Bubble Profile</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center" id="bubbleProfileContent">
+            <!-- Profile picture and description will be injected here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    function viewBubbleModal(profilePic, description) {
+        let html = '';
+        if (profilePic) {
+            html += `<img src="${profilePic}" alt="Profile Picture" class="img-thumbnail mb-2" style="max-width:100px;max-height:100px;"><br>`;
+        } else {
+            html += `<div class="mb-2 text-muted" style="font-size:0.9em;">No Image</div>`;
+        }
+        html += `<div>${description}</div>`;
+        document.getElementById('bubbleProfileContent').innerHTML = html;
+        var modal = new bootstrap.Modal(document.getElementById('bubbleProfileModal'));
+        modal.show();
+    }
     </script>
 </body>
 </html>
